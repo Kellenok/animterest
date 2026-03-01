@@ -250,6 +250,34 @@ input[type="number"]::-webkit-outer-spin-button {
     color: var(--text);
 }
 
+@media (max-width: 600px) {
+    .top-nav {
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 16px;
+    }
+
+    .nav-left {
+        order: 1;
+        flex: 1;
+    }
+
+    .nav-right {
+        order: 2;
+        flex: 1;
+    }
+
+    .nav-center {
+        order: 3;
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+    .search-pill {
+        max-width: none;
+    }
+}
+
 
 /* ==========================================================================
  * SUB HEADER / ARE.NA STYLE COLUMNS
@@ -949,5 +977,9 @@ input[type="range"]::-webkit-slider-thumb {
     .details-hero {
         grid-column: 1 / -1;
         grid-row: span 1;
+    }
+
+    .details-actions {
+        grid-template-columns: 1fr;
     }
 }

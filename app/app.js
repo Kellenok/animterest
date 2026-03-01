@@ -14,13 +14,11 @@
     const scrollToTopBtn = document.getElementById('scroll-to-top');
     const gridSlider = document.getElementById('grid-slider');
     const controlsContainer = document.getElementById('controls-container');
-    const swipeLaunchControls = document.querySelector('.swipe-launch-controls');
     const favoritesControlsWrapper = document.getElementById('favorites-controls-wrapper');
     const styleCounter = document.getElementById('style-counter');
     const favoritesCounter = document.getElementById('favorites-counter');
     const txtExportContainer = document.getElementById('txt-export-container');
     const importFavoritesInput = document.getElementById('import-favorites-input');
-    const swipeContinueHint = document.getElementById('swipe-continue-hint'); // Новый элемент
     const jumpInput = document.getElementById('jump-input');
     const clearJumpBtn = document.getElementById('clear-jump-btn'); // Эта кнопка теперь крестик
     const jumpControls = document.querySelector('.jump-controls');
@@ -314,7 +312,7 @@
             jumpInput.placeholder = 'Jump to rank...';
         } else {
             galleryContainer.classList.remove('uniqueness-view');
-            jumpInput.placeholder = 'Jump to work count...';
+            jumpInput.placeholder = 'Jump to count...';
         }
         // Добавляем класс для вида "Избранное"
         galleryContainer.classList.toggle('favorites-view', currentView === 'favorites');
@@ -576,8 +574,6 @@
         jumpControls.classList.toggle('disabled', isSearchingByName);
         // Блокируем поиск по имени, если идет поиск по "Jump"
         searchInput.parentElement.classList.toggle('disabled', isJumpingByCount);
-        // Блокируем Swipe Mode, если идет поиск по имени или "Jump"
-        swipeLaunchControls.classList.toggle('disabled', isSearchingByName || isJumpingByCount);
     }
 
     // --- Обработчики событий ---
@@ -610,9 +606,7 @@
         setActiveTab(tabGallery);
         favoritesControlsWrapper.style.display = 'none'; // Скрываем кнопки импорта/экспорта
         txtExportContainer.style.display = 'none';
-        swipeContinueHint.style.display = 'none'; // Скрываем подсказку
         jumpControls.style.display = 'flex';
-        swipeLaunchControls.style.display = 'flex';
         sortControls.style.display = 'flex';
         sortByDateBtn.style.display = 'none';
         if (sortType === 'date') {
@@ -639,9 +633,7 @@
         setActiveTab(tabFavorites);
         favoritesControlsWrapper.style.display = 'flex'; // Показываем кнопки импорта/экспорта (now column layout)
         txtExportContainer.style.display = 'flex';
-        swipeContinueHint.style.display = 'block'; // Показываем подсказку
         jumpControls.style.display = 'flex'; // ТЕПЕРЬ ПОКАЗЫВАЕМ
-        swipeLaunchControls.style.display = 'none';
         sortControls.style.display = 'flex'; // ТЕПЕРЬ ПОКАЗЫВАЕМ
         sortByDateBtn.style.display = 'inline-block';
         currentView = 'favorites';
@@ -988,52 +980,35 @@
         }
     }
 
-    // --- Artist Details View Logic ---
-    function renderArtistView(item) {
-        currentDetailsItem = item;
+    window.addEventListener('resize', () => {
+        updateDetailsLayout();
+    });
 
-        // Hide main gallery, show artist view
-        viewGallery.classList.add('hidden');
-        controlsContainerWrapper.style.display = 'none';
-        viewArtist.classList.remove('hidden');
+    function updateDetailsLayout() {
+        if (viewArtist.classList.contains('hidden')) return;
 
-        // Setup image and text
-        detailsImage.src = item.image;
-        detailsArtistName.textContent = item.artist;
-        detailsWorksCount.textContent = item.worksCount.toLocaleString('en-US');
-
-        // Setup Favorite state
-        updateDetailsFavoriteButton(item.id);
-
-        // Setup External Links
-        let formattedName = item.artist.replace(/\\/g, '').replace(/ /g, '_');
-        const linkTag = encodeURIComponent(formattedName);
-        detailsDanbooruLink.href = `https://danbooru.donmai.us/posts?tags=${linkTag}`;
-        detailsGelbooruLink.href = `https://gelbooru.com/index.php?page=post&s=list&tags=${linkTag}`;
-
-        // --- Layout logic: Desktop vs Mobile ---
         const isMobile = window.innerWidth <= 600;
         const infoPanel = detailsGrid.querySelector('.details-info-panel');
 
         if (isMobile) {
-            // Reset all custom grid styling for mobile stack
+            // Keep grid layout on mobile to preserve similar cards size
             detailsGrid.style.gridTemplateColumns = '';
-            detailsGrid.style.display = 'flex';
-            detailsGrid.style.flexDirection = 'column';
+            detailsGrid.style.display = '';
+            detailsGrid.style.flexDirection = '';
 
-            detailsHero.style.gridColumn = '';
-            detailsHero.style.gridRow = '';
+            detailsHero.style.gridColumn = '1 / -1';
+            detailsHero.style.gridRow = 'auto';
             detailsHero.style.paddingRight = '0';
 
-            infoPanel.style.gridColumn = '';
-            infoPanel.style.gridRow = '';
+            infoPanel.style.gridColumn = '1 / -1';
+            infoPanel.style.gridRow = 'auto';
             infoPanel.style.maxWidth = 'none';
             infoPanel.style.padding = '16px 0';
         } else {
             // Desktop: Restore grid and calculate spans
             detailsGrid.style.display = 'grid';
             detailsGrid.style.flexDirection = '';
-            // (Total columns logic remains)
+
             const gridComputedStyle = getComputedStyle(detailsGrid);
             const totalCols = gridComputedStyle.gridTemplateColumns.split(' ').length || 7;
             const gridWidth = detailsGrid.clientWidth;
@@ -1065,11 +1040,40 @@
             detailsGrid.style.setProperty('--detail-hero-rows', heroRows);
             detailsGrid.style.setProperty('--detail-info-cols', Math.min(3, Math.max(1, totalCols - heroCols)));
 
+            detailsHero.style.gridColumn = '';
+            detailsHero.style.gridRow = '';
             detailsHero.style.paddingRight = '16px';
             infoPanel.style.gridColumn = `${heroCols + 1} / -1`;
             infoPanel.style.gridRow = `1 / ${heroRows}`;
             infoPanel.style.maxWidth = '360px';
+            infoPanel.style.padding = '4px 0';
         }
+    }
+
+    // --- Artist Details View Logic ---
+    function renderArtistView(item) {
+        currentDetailsItem = item;
+
+        // Hide main gallery, show artist view
+        viewGallery.classList.add('hidden');
+        controlsContainerWrapper.style.display = 'none';
+        viewArtist.classList.remove('hidden');
+
+        // Setup image and text
+        detailsImage.src = item.image;
+        detailsArtistName.textContent = item.artist;
+        detailsWorksCount.textContent = item.worksCount.toLocaleString('en-US');
+
+        // Setup Favorite state
+        updateDetailsFavoriteButton(item.id);
+
+        // Setup External Links
+        let formattedName = item.artist.replace(/\\/g, '').replace(/ /g, '_');
+        const linkTag = encodeURIComponent(formattedName);
+        detailsDanbooruLink.href = `https://danbooru.donmai.us/posts?tags=${linkTag}`;
+        detailsGelbooruLink.href = `https://gelbooru.com/index.php?page=post&s=list&tags=${linkTag}`;
+
+        updateDetailsLayout();
 
         // Disconnect previous observer
         if (similarArtistsObserver) {

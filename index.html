@@ -55,11 +55,6 @@
         </div>
 
         <div class="nav-right">
-            <div class="swipe-launch-controls">
-                <button id="launch-swipe-btn" class="swipe-btn" title="Launch Swipe Mode (Hotkeys: ← / →, Space)">
-                    <span>Swipe</span>
-                </button>
-            </div>
             <a href="https://app.lava.top/products/17f881bc-a113-413a-9bde-9e59287f4dfb/eb748d4e-7c34-47fd-80fd-8ef86946ae85"
                 class="support-btn" target="_blank" rel="noopener noreferrer">Support</a>
         </div>
@@ -105,7 +100,6 @@
                     <button id="save-favorites-btn" class="sh-link action-btn">Export JSON State</button>
                     <input type="file" id="import-favorites-input" accept=".json" style="display: none;">
                 </div>
-                <p id="swipe-continue-hint" class="sh-hint" style="display: none;">Middle-click to resume swipe</p>
             </div>
         </div>
 
@@ -141,32 +135,6 @@
         <!-- Gallery Grid Container -->
         <div id="gallery-container" class="gallery-grid"></div>
     </main>
-
-    <!-- Swipe Overlay (Remains functionally identical, restyled in CSS) -->
-    <div id="swipe-overlay" class="swipe-overlay">
-        <header class="swipe-header">
-            <div class="swipe-header-left">
-                <div class="swipe-favorites-counter" title="Total favorites">
-                    <span class="swipe-favorites-icon">♥</span>
-                    <span id="swipe-favorites-count">0</span>
-                </div>
-            </div>
-            <h2 id="swipe-artist-name" class="swipe-artist-name"></h2>
-            <button id="swipe-close" class="swipe-close-btn" aria-label="Close Swipe Mode">&times;</button>
-        </header>
-        <div id="swipe-container" class="swipe-container">
-            <img id="swipe-image-prev" class="swipe-image swipe-image--prev" src="" alt="">
-            <img id="swipe-image-current" class="swipe-image swipe-image--current" src="" alt="">
-            <img id="swipe-image-next" class="swipe-image swipe-image--next" src="" alt="">
-        </div>
-        <div id="swipe-like-feedback" class="swipe-like-feedback">
-            <div class="heart"></div>
-        </div>
-        <div class="swipe-hint">
-            <kbd>&larr;</kbd> Skip &nbsp; | &nbsp; <kbd>Space</kbd> / <kbd>&rarr;</kbd> Like &nbsp; | &nbsp;
-            <kbd>Z</kbd> Undo
-        </div>
-    </div>
 
     <!-- ARTIST DETAILS VIEW (SPA Route) -->
     <main id="view-artist" class="main-content view-section hidden">
@@ -224,7 +192,6 @@
     </main>
 
     <script src="app/data.js"></script>
-    <script src="app/similar.js"></script>
     <script src="app/app.js"></script>
 </body>
 
