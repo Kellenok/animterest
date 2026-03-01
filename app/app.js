@@ -568,8 +568,8 @@
         const isSearchingByName = searchInput.value.trim().length > 0;
         const isJumpingByCount = jumpInput.value.trim().length > 0;
 
-        // Блокируем сортировку, если активен любой из поисков
-        sortControls.classList.toggle('disabled', isSearchingByName || isJumpingByCount);
+        // Блокируем сортировку, если активен переход по количеству
+        sortControls.classList.toggle('disabled', isJumpingByCount);
         // Блокируем "Jump", если идет поиск по имени
         jumpControls.classList.toggle('disabled', isSearchingByName);
         // Блокируем поиск по имени, если идет поиск по "Jump"
@@ -803,11 +803,16 @@
         searchInput.dispatchEvent(event);
     });
 
-    // Скрываем клавиатуру на мобильных при нажатии Enter
+    // Скрываем клавиатуру на мобильных при нажатии Enter и возвращаемся в галерею
     searchInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && window.innerWidth <= 992) {
-            e.preventDefault(); // Предотвращаем стандартное поведение (например, отправку формы)
-            e.target.blur();
+        if (e.key === 'Enter') {
+            if (window.location.hash.startsWith('#/artist/')) {
+                window.location.hash = ''; // Возвращаемся к результатам поиска
+            }
+            if (window.innerWidth <= 992) {
+                e.preventDefault(); // Предотвращаем стандартное поведение (например, отправку формы)
+                e.target.blur();
+            }
         }
     });
 
@@ -1015,22 +1020,8 @@
             const gap = 2; // gallery-grid gap is 2px
             const colWidth = (gridWidth - (totalCols - 1) * gap) / totalCols;
 
-            // Find N columns for hero
-            let heroCols = 2;
-            for (let n = 1; n <= totalCols; n++) {
-                const w = n * colWidth + (n - 1) * gap;
-                if (w >= 300 && w <= 500) {
-                    heroCols = n;
-                    break;
-                }
-                if (w > 500) {
-                    heroCols = Math.max(1, n - 1);
-                    break;
-                }
-            }
-            if ((heroCols * colWidth + (heroCols - 1) * gap) < 300 && heroCols < totalCols) {
-                heroCols = Math.min(totalCols, heroCols + 1);
-            }
+            // Hero always takes 2 columns as requested
+            const heroCols = 2;
 
             const cardVisualHeight = colWidth * (1216 / 832) + 30;
             const heroImageHeight = (heroCols * colWidth + (heroCols - 1) * gap) * (1216 / 832);
