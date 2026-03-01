@@ -1133,6 +1133,13 @@
             spinner.textContent = 'Loading similar artists...';
             detailsGrid.appendChild(spinner);
 
+            // Inject similar.js only when needed, if not already loading
+            if (!document.querySelector('script[src="app/similar.js"]')) {
+                const script = document.createElement('script');
+                script.src = 'app/similar.js';
+                document.body.appendChild(script);
+            }
+
             // Wait until similar.js finishes loading
             const checkDataInterval = setInterval(() => {
                 let checkLoaded = false;
@@ -1437,14 +1444,6 @@
             loadInitialData().then(() => {
                 // Initial route parsing
                 handleHashChange();
-
-                // Lazy-load similar.js in the background without blocking initial render
-                setTimeout(() => {
-                    const script = document.createElement('script');
-                    script.src = 'app/similar.js';
-                    script.defer = true;
-                    document.body.appendChild(script);
-                }, 100);
             });
         })
         .catch(err => {
