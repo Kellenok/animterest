@@ -1,8 +1,4 @@
-﻿/* ==========================================================================
- * ANIMA 2B EXPLORER - MINIMALIST BRUTALIST UI
- * Reference: Are.na / Cosmos / Pinterest
- * ========================================================================== */
-
+﻿/* Global CSS Variables and Media Queries */
 :root {
     --bg: #050505;
     --text: #ffffff;
@@ -13,17 +9,15 @@
     --accent-bg: #1a1a1a;
 
     --radius: 0px;
-    /* Sharp corners like raw brutalism, or use 4px for tiny softening */
+
     --radius-pill: 9999px;
     --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
 
-    /* Responsive Grid Defaults */
     --base-cols: 7;
     --grid-offset: 0;
     --grid-columns: calc(var(--base-cols) + var(--grid-offset));
 }
 
-/* Responsive Grid Base Columns */
 @media (max-width: 1600px) {
     :root {
         --base-cols: 6;
@@ -60,7 +54,6 @@
     padding: 0;
 }
 
-/* UI Utilities */
 .hidden {
     display: none !important;
 }
@@ -71,7 +64,7 @@ body {
     color: var(--text);
     line-height: 1.4;
     -webkit-font-smoothing: antialiased;
-    /* Prevent default brutal scrollbars from ruining layout */
+
     scrollbar-width: thin;
     scrollbar-color: var(--border) var(--bg);
     padding-bottom: 60px;
@@ -104,9 +97,7 @@ button {
     color: inherit;
 }
 
-/* ==========================================================================
- * TOP NAVIGATION (Header)
- * ========================================================================== */
+/* Top Navigation Bar Styling */
 .top-nav {
     display: flex;
     align-items: center;
@@ -149,7 +140,6 @@ button {
     justify-content: center;
 }
 
-/* Search Pill Concept */
 .search-pill {
     display: flex;
     align-items: center;
@@ -188,10 +178,9 @@ button {
 
 .jump-input {
     width: 120px;
-    /* Smaller input for jump number */
+
 }
 
-/* Hide spin buttons */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -278,16 +267,12 @@ input[type="number"]::-webkit-outer-spin-button {
     }
 }
 
-
-/* ==========================================================================
- * SUB HEADER / ARE.NA STYLE COLUMNS
- * ========================================================================== */
 .sub-header {
     display: flex;
     border-bottom: 1px solid var(--border);
     padding: 24px;
     gap: 48px;
-    /* High spacing between columns */
+
     overflow-x: auto;
 }
 
@@ -396,21 +381,18 @@ input[type="range"]::-webkit-slider-thumb {
     cursor: grab;
 }
 
-
-/* ==========================================================================
- * GALLERY GRID (Pinterest/Are.na block style)
- * ========================================================================== */
 .main-content {
     padding: 24px;
 }
 
+/* Main Gallery Grid and Cards */
 .gallery-grid {
     display: grid;
     grid-template-columns: repeat(var(--grid-columns), 1fr);
     grid-auto-rows: min-content;
-    /* Ensure rows don't stretch */
+
     gap: 2px;
-    /* Very thin brutalist grid gap */
+
 }
 
 .card {
@@ -430,16 +412,15 @@ input[type="range"]::-webkit-slider-thumb {
 .card__image {
     width: 100%;
     height: auto;
-    /* Maintain proper Pinterest flow - allow images to dictate height naturally or enforce aspect ratio */
+
     aspect-ratio: 832 / 1216;
-    /* Original data */
+
     object-fit: cover;
     display: block;
     background-color: var(--bg);
     transition: filter 0.3s ease;
 }
 
-/* Hover effect: dim image, show info */
 .card:hover .card__image {
     filter: brightness(0.75);
 }
@@ -465,7 +446,6 @@ input[type="range"]::-webkit-slider-thumb {
     text-overflow: ellipsis;
 }
 
-/* Metadata pill over cards */
 .works-count,
 .uniqueness-rank {
     position: absolute;
@@ -494,7 +474,6 @@ input[type="range"]::-webkit-slider-thumb {
     display: none;
 }
 
-
 .favorite-button {
     position: absolute;
     top: 12px;
@@ -507,7 +486,6 @@ input[type="range"]::-webkit-slider-thumb {
     cursor: pointer;
     font-size: 0;
 
-    /* Hollow Material Heart */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='48px' viewBox='0 -960 960 960' width='48px' fill='%23ffffff'%3E%3Cpath d='m480-121-41-37q-105.77-97.12-174.88-167.56Q195-396 154-451.5T96.5-552Q80-597 80-643q0-90.15 60.5-150.58Q201-854 290-854q57 0 105.5 27t84.5 78q42-54 89-79.5T670-854q89 0 149.5 60.42Q880-733.15 880-643q0 46-16.5 91T806-451.5Q765-396 695.88-325.56 626.77-255.12 521-158l-41 37Zm0-79q101.24-93 166.62-159.5Q712-426 750.5-476t54-89.14q15.5-39.13 15.5-77.72 0-66.14-42-108.64T670.22-794q-51.52 0-95.37 31.5T504-674h-49q-26-56-69.85-88-43.85-32-95.37-32Q224-794 182-751.5t-42 108.82q0 38.68 15.5 78.18 15.5 39.5 54 90T314-358q66 66 166 158Zm0-297Z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: center;
@@ -528,7 +506,7 @@ input[type="range"]::-webkit-slider-thumb {
 .favorite-button.favorited {
     opacity: 1;
     background-color: rgba(0, 0, 0, 0.4);
-    /* Filled Material Heart in White */
+
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='48px' viewBox='0 -960 960 960' width='48px' fill='%23ffffff'%3E%3Cpath d='m480-120-58-52q-101-91-167-157T150-447.5Q111-500 95.5-544T80-634q0-94 63-157t157-63q52 0 99 22t81 62q34-40 81-62t99-22q94 0 157 63t63 157q0 46-15.5 90T810-447.5Q771-395 705-329T538-172l-58 52Z'/%3E%3C/svg%3E");
     border: none;
 }
@@ -575,11 +553,7 @@ input[type="range"]::-webkit-slider-thumb {
     background-color: rgba(0, 0, 0, 0.6);
 }
 
-/* ==========================================================================
- * UTILITIES
- * ========================================================================== */
-
-/* Loaders and Toasts */
+/* Loading Spinner and Toasts */
 #loader {
     display: flex;
     flex-direction: column;
@@ -606,7 +580,6 @@ input[type="range"]::-webkit-slider-thumb {
     }
 }
 
-
 #toast-notification {
     position: fixed;
     bottom: 24px;
@@ -629,7 +602,6 @@ input[type="range"]::-webkit-slider-thumb {
     visibility: visible;
     transform: translateX(-50%) translateY(0);
 }
-
 
 .scroll-to-top {
     position: fixed;
@@ -660,17 +632,12 @@ input[type="range"]::-webkit-slider-thumb {
     color: var(--bg);
 }
 
-
-/* disabled states */
 .disabled {
     opacity: 0.3;
     pointer-events: none;
 }
 
-
-/* ==========================================================================
- * SWIPE MODE 
- * ========================================================================== */
+/* Image Swipe/Zoom Overlay */
 .swipe-overlay {
     position: fixed;
     top: 0;
@@ -734,9 +701,8 @@ input[type="range"]::-webkit-slider-thumb {
 
 .swipe-artist-name.copied-feedback {
     color: #4CAF50;
-    /* Green flash for copy */
-}
 
+}
 
 .swipe-close-btn {
     font-size: 32px;
@@ -783,7 +749,6 @@ input[type="range"]::-webkit-slider-thumb {
     opacity: 0.3;
 }
 
-/* Feedback heart animation */
 .swipe-like-feedback {
     position: absolute;
     top: 50%;
@@ -839,11 +804,7 @@ input[type="range"]::-webkit-slider-thumb {
     padding: 0 4px;
 }
 
-/* ==========================================================================
- * ARTIST DETAILS - SPA PAGE VIEW
- * ========================================================================== */
-
-/* Back button row */
+/* Artist Details Page (SPA View) */
 .details-page-header {
     margin-bottom: 24px;
 }
@@ -871,13 +832,12 @@ input[type="range"]::-webkit-slider-thumb {
     color: var(--text);
 }
 
-/* Hero block inside gallery grid: image only */
 .details-hero {
     grid-column: 1 / span var(--detail-hero-cols, 2);
     grid-row: 1 / span var(--detail-hero-rows, 3);
     overflow: hidden;
     padding-right: 16px;
-    /* slight gap between hero image and side cards */
+
 }
 
 .details-hero .details-image {
@@ -888,7 +848,6 @@ input[type="range"]::-webkit-slider-thumb {
     display: block;
 }
 
-/* Info panel: positioned explicitly by JS, content left-aligned */
 .details-info-panel {
     align-self: start;
     padding: 4px 0;
@@ -909,7 +868,6 @@ input[type="range"]::-webkit-slider-thumb {
     margin-bottom: 10px;
 }
 
-/* Action Buttons Grid */
 .details-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -964,7 +922,6 @@ input[type="range"]::-webkit-slider-thumb {
     height: 14px;
 }
 
-/* Side cards: cards next to the hero image, aligned to bottom */
 .side-card.card {
     align-self: end;
 }

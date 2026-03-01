@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <!-- Google tag (gtag.js) -->
+
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-MY90CFN1R2"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
@@ -15,15 +15,16 @@
     <title>Anima 2B Style Explorer</title>
     <meta name="description"
         content="Visual database of over 20,000 artist styles for the Anima 2B model. Compare Danbooru artists and copy optimized prompts.">
-    <!-- Preconnect to Image CDN for performance -->
+
     <link rel="preconnect" href="https://cdn.statically.io">
     <link rel="dns-prefetch" href="https://cdn.statically.io">
-    <!-- Using a cache buster parameter to ensure styles update for the user -->
+
     <link rel="stylesheet" href="app/style.css?v=22">
 </head>
 
 <body>
-    <!-- Top Navigation Bar -->
+
+    <!-- Top Navigation Bar with Search -->
     <header class="top-nav">
         <a href="#" class="nav-left" style="text-decoration: none; color: inherit;">
             <h1 class="logo">Anima 2B</h1>
@@ -43,7 +44,7 @@
                 <button id="clear-search-btn" class="clear-input-btn" aria-label="Clear search"
                     style="display: none;">&times;</button>
                 <div class="input-divider"></div>
-                <!-- Adding Jump Input Here for compactness and unity with search -->
+
                 <div class="jump-controls" style="display: flex; align-items: center;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="jump-icon" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -63,9 +64,9 @@
         </div>
     </header>
 
-    <!-- Contextual Sub-Header (Are.na Style Columns) -->
+    <!-- Sorting, Filtering, and Display Controls -->
     <div id="controls-container" class="sub-header controls-container">
-        <!-- ... (controls content remains the same) ... -->
+
         <div class="sh-column sh-view">
             <h2 class="sh-title">View</h2>
             <div class="sh-links tabs">
@@ -117,29 +118,26 @@
         </div>
     </div>
 
-    <!-- MAIN GALLERY VIEW -->
+    <!-- Main UI: Dynamic Grid Gallery -->
     <main id="view-gallery" class="main-content view-section">
-        <!-- Toast Notification -->
+
         <div id="toast-notification" aria-live="polite"></div>
 
-        <!-- Scroll to Top -->
         <button id="scroll-to-top" class="scroll-to-top" aria-label="Scroll to top">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 19V5M5 12l7-7 7 7" />
             </svg>
         </button>
 
-        <!-- Loader -->
         <div id="loader" class="loader-container">
             <div class="spinner"></div>
             <p>Loading dataset...</p>
         </div>
 
-        <!-- Gallery Grid Container -->
         <div id="gallery-container" class="gallery-grid"></div>
     </main>
 
-    <!-- ARTIST DETAILS VIEW (SPA Route) -->
+    <!-- Secondary UI: Details Page (SPA routing) -->
     <main id="view-artist" class="main-content view-section hidden">
         <div class="details-page-header">
             <button id="details-back-btn" class="details-back-btn" aria-label="Go Back">
@@ -152,13 +150,12 @@
             </button>
         </div>
 
-        <!-- Unified grid: hero + cards all in one gallery grid -->
         <div id="details-grid" class="gallery-grid">
-            <!-- Hero block: image only, spans set by JS -->
+
             <div id="details-hero" class="details-hero">
                 <img id="details-image" class="details-image" src="" alt="Artist Preview">
             </div>
-            <!-- Info panel: separate grid item, flows to the right of hero -->
+
             <div class="details-info-panel">
                 <h2 id="details-artist-name">Artist Name</h2>
                 <div class="details-subtitle"><span id="details-works-count">0</span> works</div>
@@ -190,7 +187,7 @@
                     </a>
                 </div>
             </div>
-            <!-- Cards injected here by JS, same .card elements as the main gallery -->
+
         </div>
     </main>
 
