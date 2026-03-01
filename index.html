@@ -1,157 +1,231 @@
-﻿﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-MY90CFN1R2"></script>
     <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-MY90CFN1R2');
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-MY90CFN1R2');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anima 2B Style Explorer - Visual Artist Guide for AI</title>
-    <meta name="description" content="Visual database of over 20,000 artist styles for the Anima 2B model. Compare Danbooru artists and copy optimized prompts.">
-    <meta name="keywords" content="Anima 2B, Anima AI, Stable Diffusion, Artist Styles, Danbooru Tags, AI Art Library">
-    <link rel="stylesheet" href="app/style.css?v=20">
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "Anima 2B Style Explorer",
-      "description": "Visual benchmarking tool for artist styles in the Anima 2B model based on Danbooru dataset.",
-      "applicationCategory": "DesignApplication",
-      "operatingSystem": "Web",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      }
-    }
-    </script>
+    <title>Anima 2B Style Explorer</title>
+    <meta name="description"
+        content="Visual database of over 20,000 artist styles for the Anima 2B model. Compare Danbooru artists and copy optimized prompts.">
+    <!-- Using a cache buster parameter to ensure styles update for the user -->
+    <link rel="stylesheet" href="app/style.css?v=22">
 </head>
+
 <body>
-    <div class="top-info-container">
-        <a href="https://github.com/ThetaCursed" class="author-credit" title="Created by ThetaCursed" target="_blank" rel="noopener noreferrer">Created by <span>ThetaCursed</span></a>
-        <a href="https://app.lava.top/products/17f881bc-a113-413a-9bde-9e59287f4dfb/eb748d4e-7c34-47fd-80fd-8ef86946ae85" class="support-button-top" target="_blank" rel="noopener noreferrer">☕ Buy me a coffee</a>
-    </div>
-    <div class="page-title-container">
-        <h1 class="page-title">Anima 2B - Style Explorer</h1>
-        <p class="page-subtitle" id="style-counter"></p>
-        <div class="visually-hidden">
-            Welcome to the ultimate visual reference tool for the Anima 2B parameter model. 
-            This library features over 20,000+ artist tags based on the Danbooru dataset. 
-            Our explorer provides visual benchmarking for Stable Diffusion and ComfyUI users, 
-            showcasing how the Anima 2B model interprets different artistic styles, 
-            from classic masters to modern illustrators. 
-            Compare artist weights, dataset popularity, and copy optimized @artist prompts 
-            for your AI art generation workflow.
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+        <div class="nav-left">
+            <h1 class="logo">Anima 2B</h1>
+            <span class="logo-divider">/</span>
+            <span class="logo-subtitle">Explorer</span>
         </div>
-    </div>
 
-    <header class="header">
-        <nav class="tabs">
-            <a href="#" id="tab-gallery" class="tab-button active">Gallery</a>
-            <a href="#" id="tab-favorites" class="tab-button">Favorites</a>
-            <a href="about.html" class="tab-button">About</a>
-        </nav>
-    </header>
-    
-    <div id="controls-container" class="controls-container">
-        <div class="sort-jump-group">
-            <div class="sort-controls">
-                <span class="sort-label">Sort by:</span> <!-- Этот текст будет слева -->
-                <div class="sort-buttons-group"> <!-- Новая обертка для кнопок -->
-                    <button id="sort-by-name" class="sort-button" data-sort-by="name">
-                        Name <span class="sort-arrow"></span></button>
-                    <button id="sort-by-uniqueness" class="sort-button" data-sort-by="uniqueness">
-                        Uniqueness <span class="sort-arrow"></span></button>
-                    <button id="sort-by-works" class="sort-button" data-sort-by="works">
-                        Works <span class="sort-arrow"></span></button>
+        <div class="nav-center">
+            <div class="search-pill search-wrapper">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="search-icon">
+                    <path
+                        d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <input type="text" id="search-input" class="search-input" placeholder="Search artist..."
+                    aria-label="Search artist">
+                <button id="clear-search-btn" class="clear-input-btn" aria-label="Clear search"
+                    style="display: none;">&times;</button>
+                <div class="input-divider"></div>
+                <!-- Adding Jump Input Here for compactness and unity with search -->
+                <div class="jump-controls" style="display: flex; align-items: center;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="jump-icon" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5V19M12 5L6 11M12 5L18 11" />
+                    </svg>
+                    <input type="number" id="jump-input" class="jump-input search-input" placeholder="Jump to rank..."
+                        min="1" aria-label="Jump to numerical rank">
+                    <button id="clear-jump-btn" class="clear-input-btn" aria-label="Clear jump"
+                        style="display: none;">&times;</button>
                 </div>
-            </div>
-            <!-- Контейнер для кнопки экспорта в TXT (возвращаем в левый блок) -->
-            <div id="txt-export-container" class="sort-buttons-group" style="display: none;">
-                <button id="export-txt-btn" class="sort-button" title="Export artist names to a .txt file">Export Favorites (.txt)</button>
             </div>
         </div>
-        <div class="search-and-import-wrapper">
-            <div class="search-wrapper">
-                <div class="search-input-container">
-                    <input type="search" id="search-input" class="search-input" placeholder="Search by name...">
-                    <button id="clear-search-btn" class="clear-input-btn" title="Clear search" style="display: none;">×</button>
-                </div>
-                <div class="jump-controls">
-                    <input type="number" id="jump-input" class="search-input" placeholder="Jump to work count...">
-                    <button id="clear-jump-btn" class="clear-input-btn" title="Clear jump" style="display: none;">×</button> 
-                </div>
-            </div>
-            <div id="swipe-continue-hint" class="hotkey-hint" style="display: none;" title="Jump to this artist in the main gallery">
-                Middle-click a card to find in gallery
-            </div>
-            <div id="favorites-controls-wrapper" style="display: none;">
-                <button id="import-favorites-btn" class="sort-button" title="Import favorites from a .json file">Import JSON</button>
-                <button id="save-favorites-btn" class="sort-button" title="Export favorites to a .json file">Export JSON</button>
-                <input type="file" id="import-favorites-input" accept=".json" style="display: none;">
-            </div>
-        </div>
-        <div class="right-controls-group">
+
+        <div class="nav-right">
             <div class="swipe-launch-controls">
-                <button id="start-swipe-mode-btn" class="swipe-launch-button" title="Start Swipe Mode from the beginning">
-                    <span class="swipe-launch-icon"></span>
-                    Swipe Mode
+                <button id="launch-swipe-btn" class="swipe-btn" title="Launch Swipe Mode (Hotkeys: ← / →, Space)">
+                    <span>Swipe</span>
                 </button>
-                <small class="hotkey-hint" title="You can also middle-click on any card to start">Middle-click a card</small>
             </div>
-            <div class="grid-controls">
-                <div class="slider-wrapper">
-                    <label for="grid-slider" id="grid-slider-label">Columns: <span id="grid-slider-value">5</span></label>
-                    <input type="range" id="grid-slider" min="4" max="10" value="5" title="Number of columns">
+            <a href="https://app.lava.top/products/17f881bc-a113-413a-9bde-9e59287f4dfb/eb748d4e-7c34-47fd-80fd-8ef86946ae85"
+                class="support-btn" target="_blank" rel="noopener noreferrer">Support</a>
+        </div>
+    </header>
+
+    <!-- Contextual Sub-Header (Are.na Style Columns) -->
+    <div id="controls-container" class="sub-header controls-container">
+        <!-- ... (controls content remains the same) ... -->
+        <div class="sh-column sh-view">
+            <h2 class="sh-title">View</h2>
+            <div class="sh-links tabs">
+                <a href="#" id="tab-gallery" class="sh-link active">All Profiles <span id="style-counter"
+                        class="sh-count"></span></a>
+                <a href="#/favorites" id="tab-favorites" class="sh-link">Favorites <span id="favorites-counter"
+                        class="sh-count">0</span></a>
+                <a href="about.html" class="sh-link">About & Info</a>
+            </div>
+        </div>
+
+        <div class="sh-column sh-sort">
+            <h2 class="sh-title">Sort</h2>
+            <div class="sh-links sort-controls">
+                <button id="sort-by-name" class="sh-link sort-button active" data-sort-by="name">Name <span
+                        class="sort-arrow"></span></button>
+                <button id="sort-by-uniqueness" class="sh-link sort-button" data-sort-by="uniqueness">Uniqueness <span
+                        class="sort-arrow"></span></button>
+                <button id="sort-by-works" class="sh-link sort-button" data-sort-by="works">Works <span
+                        class="sort-arrow"></span></button>
+                <button id="sort-by-random" class="sh-link sort-button" data-sort-by="random">Random <span
+                        class="sort-arrow"></span></button>
+                <button id="sort-by-date" class="sh-link sort-button" data-sort-by="date" style="display: none;">Date
+                    Added <span class="sort-arrow"></span></button>
+            </div>
+        </div>
+
+        <div class="sh-column sh-actions" id="txt-export-container" style="display: none;">
+            <h2 class="sh-title">Actions</h2>
+            <div class="sh-links">
+                <button id="export-txt-btn" class="sh-link action-btn">Export Text List</button>
+                <div id="favorites-controls-wrapper"
+                    style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px;">
+                    <button id="import-favorites-btn" class="sh-link action-btn">Import JSON State</button>
+                    <button id="save-favorites-btn" class="sh-link action-btn">Export JSON State</button>
+                    <input type="file" id="import-favorites-input" accept=".json" style="display: none;">
                 </div>
-                <small class="hotkey-hint" title="Use number keys 4-0 to change column count">[4-0] keys</small>
+                <p id="swipe-continue-hint" class="sh-hint" style="display: none;">Middle-click to resume swipe</p>
+            </div>
+        </div>
+
+        <div class="sh-column sh-display">
+            <h2 class="sh-title">Display</h2>
+            <div class="sh-links">
+                <div class="grid-slider-wrapper">
+                    <span class="sh-label">Columns: <span id="grid-slider-value">6</span></span>
+                    <input type="range" id="grid-slider" min="3" max="10" value="6">
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- MAIN GALLERY VIEW -->
+    <main id="view-gallery" class="main-content view-section">
+        <!-- Toast Notification -->
+        <div id="toast-notification" aria-live="polite"></div>
 
-    <main id="gallery-container" class="gallery-grid"></main>
+        <!-- Scroll to Top -->
+        <button id="scroll-to-top" class="scroll-to-top" aria-label="Scroll to top">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+        </button>
 
-    <div id="loader" class="loader-container" style="display: none;">
-        <div class="loader"></div>
-    </div>
+        <!-- Loader -->
+        <div id="loader" class="loader-container">
+            <div class="spinner"></div>
+            <p>Loading dataset...</p>
+        </div>
 
-    <div id="toast-notification" class="toast"></div>
+        <!-- Gallery Grid Container -->
+        <div id="gallery-container" class="gallery-grid"></div>
+    </main>
 
-    <button id="scroll-to-top" class="scroll-to-top-btn" title="Scroll to top">↑</button>
-
-    <!-- Swipe Mode Overlay -->
-    <div id="swipe-mode-overlay" class="swipe-overlay">
-        <div class="swipe-header">
+    <!-- Swipe Overlay (Remains functionally identical, restyled in CSS) -->
+    <div id="swipe-overlay" class="swipe-overlay">
+        <header class="swipe-header">
             <div class="swipe-header-left">
-                <div id="swipe-counter" class="swipe-counter"></div>
-                <div id="swipe-favorites-counter" class="swipe-favorites-counter" title="Total favorites">
+                <div class="swipe-favorites-counter" title="Total favorites">
                     <span class="swipe-favorites-icon">♥</span>
                     <span id="swipe-favorites-count">0</span>
                 </div>
             </div>
-            <div id="swipe-artist-name" class="swipe-artist-name"></div>
-            <button id="swipe-close-btn" class="swipe-close-btn" title="Close (Esc)">&times;</button>
-        </div>
+            <h2 id="swipe-artist-name" class="swipe-artist-name"></h2>
+            <button id="swipe-close" class="swipe-close-btn" aria-label="Close Swipe Mode">&times;</button>
+        </header>
         <div id="swipe-container" class="swipe-container">
-            <img id="swipe-prev-image" class="swipe-image swipe-image--prev" alt="Previous artist">
-            <img id="swipe-current-image" class="swipe-image swipe-image--current" alt="Current artist">
-            <div id="swipe-like-feedback" class="swipe-like-feedback">
-                <div class="heart"></div>
-            </div>
-            <img id="swipe-next-image" class="swipe-image swipe-image--next" alt="Next artist">
+            <img id="swipe-image-prev" class="swipe-image swipe-image--prev" src="" alt="">
+            <img id="swipe-image-current" class="swipe-image swipe-image--current" src="" alt="">
+            <img id="swipe-image-next" class="swipe-image swipe-image--next" src="" alt="">
         </div>
-        <div class="swipe-hint">Use <kbd>←</kbd> <kbd>→</kbd> to navigate, <kbd>C</kbd> to copy name, <kbd>↓</kbd> to favorite, <kbd>Esc</kbd> to close</div>
+        <div id="swipe-like-feedback" class="swipe-like-feedback">
+            <div class="heart"></div>
+        </div>
+        <div class="swipe-hint">
+            <kbd>&larr;</kbd> Skip &nbsp; | &nbsp; <kbd>Space</kbd> / <kbd>&rarr;</kbd> Like &nbsp; | &nbsp;
+            <kbd>Z</kbd> Undo
+        </div>
     </div>
 
-    <script src="app/data.js?v=20"></script>
-    <script src="app/app.js?v=20"></script>
-    <script src="app/swipe-mode.js?v=20"></script>
+    <!-- ARTIST DETAILS VIEW (SPA Route) -->
+    <main id="view-artist" class="main-content view-section hidden">
+        <div class="details-page-header">
+            <button id="details-back-btn" class="details-back-btn" aria-label="Go Back">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                Back
+            </button>
+        </div>
+
+        <!-- Unified grid: hero + cards all in one gallery grid -->
+        <div id="details-grid" class="gallery-grid">
+            <!-- Hero block: image only, spans set by JS -->
+            <div id="details-hero" class="details-hero">
+                <img id="details-image" class="details-image" src="" alt="Artist Preview">
+            </div>
+            <!-- Info panel: separate grid item, flows to the right of hero -->
+            <div class="details-info-panel">
+                <h2 id="details-artist-name">Artist Name</h2>
+                <div class="details-subtitle"><span id="details-works-count">0</span> works</div>
+                <div class="details-actions">
+                    <button id="details-copy-btn" class="detail-action-btn primary">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy Prompt
+                    </button>
+                    <button id="details-favorite-btn" class="detail-action-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+                            </path>
+                        </svg>
+                        Favorite
+                    </button>
+                    <a id="details-danbooru-link" class="detail-action-btn nav-link" href="#" target="_blank"
+                        rel="noopener noreferrer">
+                        Danbooru ↗
+                    </a>
+                    <a id="details-gelbooru-link" class="detail-action-btn nav-link" href="#" target="_blank"
+                        rel="noopener noreferrer">
+                        Gelbooru ↗
+                    </a>
+                </div>
+            </div>
+            <!-- Cards injected here by JS, same .card elements as the main gallery -->
+        </div>
+    </main>
+
+    <script src="app/data.js"></script>
+    <script src="app/similar.js"></script>
+    <script src="app/app.js"></script>
 </body>
+
 </html>

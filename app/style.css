@@ -1,11 +1,22 @@
-﻿:root {
-    --background-color: #1c1c1e;
-    --card-background: #2c2c2e;
-    --text-color: #f2f2f7;
-    --secondary-text-color: #8e8e93;
-    --accent-color: #0a84ff;
-    --border-color: #3a3a3c;
-    --global-border-radius: 14px; /* Глобальная переменная для скругления */
+﻿/* ==========================================================================
+ * ANIMA 2B EXPLORER - MINIMALIST BRUTALIST UI
+ * Reference: Are.na / Cosmos / Pinterest
+ * ========================================================================== */
+
+:root {
+    --bg: #050505;
+    --text: #ffffff;
+    --text-muted: #888888;
+    --border: #222222;
+    --border-light: #333333;
+    --accent: #ffffff;
+    --accent-bg: #1a1a1a;
+
+    --radius: 0px;
+    /* Sharp corners like raw brutalism, or use 4px for tiny softening */
+    --radius-pill: 9999px;
+
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
 }
 
 * {
@@ -14,936 +25,598 @@
     padding: 0;
 }
 
+/* UI Utilities */
+.hidden {
+    display: none !important;
+}
+
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    padding: 20px;
+    font-family: var(--font-sans);
+    background-color: var(--bg);
+    color: var(--text);
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    /* Prevent default brutal scrollbars from ruining layout */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) var(--bg);
+    padding-bottom: 60px;
 }
 
-.page-title-container {
-    text-align: center;
-    margin-bottom: 30px;
-    padding-top: 10px; /* Отступ сверху, чтобы не перекрываться с .top-info-container */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
 }
 
-
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+::-webkit-scrollbar-track {
+    background: var(--bg);
 }
 
-.page-title {
-    font-size: 32px;
-    font-weight: 700;
-    margin-bottom: 16px; /* Увеличиваем отступ, чтобы он совпадал с отступом под виджетом */
+::-webkit-scrollbar-thumb {
+    background: var(--border-light);
+    border-radius: var(--radius-pill);
 }
 
-.page-subtitle {
-    font-size: 18px;
-    color: var(--secondary-text-color);
+a {
+    color: inherit;
+    text-decoration: none;
 }
 
-.page-subtitle .style-count-number {
-    font-weight: 600;
-    color: var(--text-color);
-    background-color: var(--border-color);
-    padding: 4px 10px;
-    border-radius: var(--global-border-radius);
-    margin-left: 6px;
-    user-select: none;
+button {
+    font-family: inherit;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: inherit;
 }
 
-.header {
+/* ==========================================================================
+ * TOP NAVIGATION (Header)
+ * ========================================================================== */
+.top-nav {
     display: flex;
-    justify-content: center; /* Отступ был 30px, уменьшаем для консистентности */
-    margin-bottom: 20px;
-    /* Добавляем разделительную линию под табами */
-    padding-bottom: 20px;
-    position: relative; /* Для позиционирования .author-credit на странице About */
-}
-
-/* Создаем полноэкранную линию с помощью псевдоэлемента */
-.header::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100vw;
-    height: 1px;
-    background-color: var(--border-color);
-}
-
-.controls-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start; /* Выравниваем все группы по верху для единой линии */
-    position: relative;
-    gap: 20px;
-    margin-bottom: 30px; /* Добавляем отступ снизу, чтобы отодвинуть галерею от линии */
-    /* Добавляем нижнюю границу и отступы для создания разделительной линии */
-    padding-bottom: 20px;
-}
-
-/* Создаем вторую полноэкранную линию */
-.controls-container::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100vw;
-    height: 1px;
-    background-color: var(--border-color);
-}
-
-.search-and-import-wrapper {
-    flex: 0 1 auto; /* Убираем растягивание, чтобы блок занимал место по контенту */
-    margin: 0 auto; /* Центрируем блок в доступном пространстве */
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 10px; /* Добавляем отступ между элементами внутри (поиском, подсказкой, кнопками) */
+    justify-content: space-between;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
 }
 
-.search-wrapper {
-    flex: 1; /* Позволяем блоку поиска занимать доступное пространство в центре */
-    min-width: 200px; /* Минимальная ширина для поля поиска */
-    max-width: 400px; /* Увеличиваем ширину для лучшей иерархии */
+.nav-left {
     display: flex;
-    flex-direction: column; /* Ставим элементы друг под другом */
-    /* Новые стили для создания единого блока */
-    background-color: var(--card-background);
-    border: 1px solid var(--border-color);
-    border-radius: var(--global-border-radius);
-    overflow: hidden; /* Скрываем углы дочерних элементов */
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.logo {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.logo-divider {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.logo-subtitle {
+    font-size: 14px;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.nav-center {
+    flex: 2;
+    display: flex;
+    justify-content: center;
+}
+
+/* Search Pill Concept */
+.search-pill {
+    display: flex;
+    align-items: center;
+    background: var(--accent-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    padding: 6px 16px;
+    width: 100%;
+    max-width: 480px;
+    transition: border-color 0.2s;
+}
+
+.search-pill:focus-within {
+    border-color: var(--border-light);
+}
+
+.search-icon,
+.jump-icon {
+    color: var(--text-muted);
+    flex-shrink: 0;
 }
 
 .search-input {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 4px 12px;
+    font-size: 13px;
+    outline: none;
     width: 100%;
-    padding: 12px 45px; /* Симметричные отступы для центрирования */
-    background-color: transparent; /* Убираем фон */
-    border: none; /* Убираем рамку */
-    border-radius: 0; /* Убираем скругление */
-    color: var(--text-color);
-    font-size: 14px;
-    font-family: inherit;
-    text-align: center;
 }
 
 .search-input::placeholder {
-    color: var(--secondary-text-color);
+    color: var(--text-muted);
 }
 
-.search-input-container {
-    position: relative; /* Контейнер для позиционирования кнопки */
-    border-bottom: 1px solid var(--border-color); /* Разделитель между полями */
-    width: 360px; /* Фиксированная ширина для десктопа */
-    margin: 0 auto; /* Центрируем на десктопе */
+.jump-input {
+    width: 120px;
+    /* Smaller input for jump number */
 }
 
-.jump-controls {
-    position: relative; /* Контейнер для позиционирования кнопки */
+/* Hide spin buttons */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.input-divider {
+    width: 1px;
+    height: 14px;
+    background: var(--border);
+    margin: 0 12px;
 }
 
 .clear-input-btn {
-    position: absolute;
-    right: 12px; /* Возвращаем стандартный отступ */
-    top: 50%;
-    transform: translateY(-50%);
-    width: 28px;
-    height: 28px;
-    background-color: #48484a; /* Делаем фон заметнее */
-    border: none;
-    border-radius: 50%;
-    color: #e5e5ea; /* Делаем крестик светлее */
-    font-size: 20px;
+    color: var(--text-muted);
+    font-size: 16px;
     line-height: 1;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s, color 0.2s, transform 0.2s;
+    padding: 0 4px;
 }
 
 .clear-input-btn:hover {
-    background-color: #58585a;
-    color: var(--text-color);
-    transform: translateY(-50%) scale(1.1); /* Добавляем эффект при наведении */
+    color: var(--text);
 }
 
-.jump-controls .search-input {
-    width: 100%; /* Растягиваем на всю ширину */
+.nav-right {
+    display: flex;
     align-items: center;
-    text-align: center; /* Центрируем текст для поля перехода на всех устройствах */
+    justify-content: flex-end;
+    gap: 16px;
+    flex: 1;
 }
 
-.search-input:focus {
-    outline: none;
+.swipe-btn {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: var(--radius-pill);
+    transition: all 0.2s;
 }
 
-.sort-jump-group {
+.swipe-btn:hover {
+    background: var(--text);
+    color: var(--bg);
+}
+
+.support-btn {
+    font-size: 13px;
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+.support-btn:hover {
+    color: var(--text);
+}
+
+
+/* ==========================================================================
+ * SUB HEADER / ARE.NA STYLE COLUMNS
+ * ========================================================================== */
+.sub-header {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    padding: 24px;
+    gap: 48px;
+    /* High spacing between columns */
+    overflow-x: auto;
+}
+
+.sh-column {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    width: 215px; /* Возвращаем фиксированную ширину, равную правому блоку */
+    min-width: max-content;
 }
-/* Контейнер для кнопки экспорта TXT, который теперь в левой колонке */
-#txt-export-container {
-    justify-content: flex-start; /* Выравниваем кнопку по левому краю на десктопе */
+
+.sh-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
     width: 100%;
 }
 
-/* Уменьшаем размер кнопки экспорта в TXT */
-#export-txt-btn {
-    padding: 8px 12px;
-    font-size: 13px;
+.sh-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-
-.sort-controls {
+.sh-link {
+    font-size: 13px;
+    color: var(--text-muted);
+    transition: color 0.2s;
     display: flex;
     align-items: center;
-    justify-content: flex-start; /* Выравниваем по левому краю, чтобы метка не уезжала */
-    gap: 10px; /* Возвращаем отступ между меткой и кнопками */
-    width: 100%; /* Заставляем контейнер занять всю ширину родителя */
+    width: fit-content;
 }
 
-.sort-label {
-    color: var(--secondary-text-color);
-    font-size: 14px;
-    white-space: nowrap; /* Запрещаем перенос текста на новую строку */
+.sh-link:hover {
+    color: var(--text);
 }
 
-.sort-buttons-group {
-    display: flex;
-    justify-content: flex-start; /* Выравниваем кнопки по началу */
-    gap: 10px; /* Сохраняем отступ между кнопками */
+.sh-link.active {
+    color: var(--text);
+    font-weight: 500;
 }
 
-.sort-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    justify-content: center; /* Центрируем текст и стрелку внутри кнопки */
-    background-color: var(--card-background);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--global-border-radius);
-    padding: 8px 12px;
-    font-size: 13px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s;
-}
-.sort-button:hover {
-    background-color: var(--border-color);
+.sh-link.active::before {
+    content: "●";
+    font-size: 8px;
+    margin-right: 6px;
+    transform: translateY(-1px);
 }
 
-/* Контейнер для кнопок импорта/экспорта JSON */
-#favorites-controls-wrapper {
-    display: inline-flex; /* Чтобы контейнер облегал кнопки */
-    border: 1px solid var(--border-color);
-    border-radius: var(--global-border-radius);
-    overflow: hidden; /* Скрываем углы дочерних элементов */
-}
-
-/* Убираем индивидуальные рамки и скругления у кнопок внутри */
-#favorites-controls-wrapper .sort-button {
-    border: none;
-    border-radius: 0;
-    background-color: var(--card-background); /* Единый фон */
-}
-
-/* Стили для кнопки Import */
-#import-favorites-btn {
-    border-right: 1px solid #545458; /* Более заметный разделитель */
-    color: var(--accent-color); /* Сохраняем акцентный цвет */
-}
-
-/* Эффекты при наведении */
-#favorites-controls-wrapper .sort-button:hover {
-    background-color: var(--border-color);
-}
-
-#import-favorites-btn:hover {
-    background-color: rgba(10, 132, 255, 0.15);
-}
-
-.sort-button.active {
-    border-color: var(--accent-color);
-    color: var(--accent-color);
-}
-/* Устанавливаем ширину кнопки Uniqueness по содержимому */
-#sort-by-uniqueness {
-    flex: 0 1 auto; /* Позволяем кнопке иметь автоматическую ширину */
-    width: auto;
+.sh-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: 6px;
+    background: var(--accent-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 .sort-arrow {
     display: inline-block;
     width: 12px;
     text-align: center;
-    transition: transform 0.2s ease-in-out;
-    transform-origin: center;
+    margin-left: 4px;
+    font-size: 10px;
 }
 
-/* Убираем стрелки в input[type=number] для Chrome, Safari, Edge, Opera */
-input::-webkit-outer-spin-button,
-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.sh-hint {
+    font-size: 11px;
+    color: var(--border-light);
+    margin-top: 4px;
 }
 
-/* Убираем стрелки в input[type=number] для Firefox */
-input[type=number] {
-  -moz-appearance: textfield;
-}
-
-
-/* Убираем стандартный крестик очистки в input[type=search] для Chrome, Safari, Edge */
-input[type="search"]::-webkit-search-decoration,
-input[type="search"]::-webkit-search-cancel-button,
-input[type="search"]::-webkit-search-results-button,
-input[type="search"]::-webkit-search-results-decoration {
-  -webkit-appearance: none;
-}
-.search-wrapper.disabled,
-.sort-controls.disabled,
-.jump-controls.disabled,
-.search-input-container.disabled,
-.swipe-launch-controls.disabled {
-    opacity: 0.5;
-    pointer-events: none;
-}
-
-.grid-controls {
-    display: flex;
-    flex-direction: column; /* Ставим элементы друг под другом */
-    align-items: flex-end; /* Выравниваем по правому краю */
-    /* width: 215px; */ /* Ширина теперь у родительского .right-controls-group */
-    justify-content: center; /* Центрируем по вертикали относительно других контролов */
-    gap: 10px;
-    color: var(--secondary-text-color);
-    font-size: 14px;
-    white-space: nowrap;
-}
-
-.right-controls-group {
-    display: flex; /* Сохраняем flex для внутреннего выравнивания */
-    justify-content: flex-end;
-    align-items: flex-start; /* Выравниваем по верху, как и левый блок */
-    gap: 40px; /* Сохраняем отступ между свайпом и сеткой */
-    width: 215px; /* Задаем ту же ширину, что и у левого блока для симметрии */
-}
-
-.swipe-launch-controls {
-    /* position: absolute; */ /* Убираем абсолютное позиционирование */
-    /* right: 0; */
-    /* top: 0; */
+.grid-slider-wrapper {
     display: flex;
     flex-direction: column;
-    align-items: center; /* Центрируем содержимое для лучшего вида */
-    min-width: 100px; /* Задаем минимальную ширину, чтобы избежать сжатия */
-    justify-content: center; /* Добавляем вертикальное центрирование */
-    gap: 10px;
-}
-
-.swipe-launch-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     gap: 8px;
-    background-color: var(--card-background);
-    color: var(--text-color);
-    border: 1px solid var(--border-color); /* Уменьшаем отступы */
-    border-radius: var(--global-border-radius); /* Уменьшаем скругление */
-    padding: 8px 12px;
-    font-size: 13px; /* Уменьшаем шрифт */
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    white-space: nowrap; /* Запрещаем перенос текста в кнопке */
-    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
-.swipe-launch-button:hover {
-    border-color: var(--accent-color);
-    color: var(--accent-color);
-}
-
-.swipe-launch-icon {
-    width: 14px; /* Уменьшаем иконку */
-    height: 14px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23f2f2f7'%3E%3Cpath d='M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z'/%3E%3C/svg%3E");
-    background-size: contain;
-    background-repeat: no-repeat;
-    transition: background-image 0.2s;
-}
-
-.swipe-launch-button:hover .swipe-launch-icon {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%230a84ff'%3E%3Cpath d='M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z'/%3E%3C/svg%3E");
-}
-
-.grid-controls .slider-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.hotkey-hint {
-    font-size: 12px; /* Уменьшаем шрифт */
-    font-weight: 600;
-    color: var(--text-color);
-    background-color: var(--border-color);
-    padding: 3px 8px; /* Уменьшаем отступы */
-    border-radius: var(--global-border-radius); /* Единый радиус */
-    white-space: nowrap; /* Запрещаем перенос текста в подсказке */
-    user-select: none; /* Предотвращаем выделение текста */
+.sh-label {
+    font-size: 13px;
+    color: var(--text-muted);
 }
 
 #grid-slider-value {
-    font-weight: 600;
-    color: var(--text-color);
+    color: var(--text);
 }
 
-/* Стилизация ползунка */
 input[type="range"] {
     -webkit-appearance: none;
     appearance: none;
-    width: 120px;
-    height: 8px; /* Сделаем чуть толще для лучшего вида с новым радиусом */
-    background: var(--card-background);
-    border-radius: calc(var(--global-border-radius) / 4);
+    width: 100px;
+    height: 2px;
+    background: var(--border-light);
     outline: none;
-    cursor: pointer;
 }
 
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    background: var(--text-color);
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
+    background: var(--text);
+    cursor: grab;
 }
 
-.tabs {
+
+/* ==========================================================================
+ * GALLERY GRID (Pinterest/Are.na block style)
+ * ========================================================================== */
+.main-content {
+    padding: 24px;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--grid-columns, 6), 1fr);
+    grid-auto-rows: min-content;
+    /* Ensure rows don't stretch */
+    gap: 2px;
+    /* Very thin brutalist grid gap */
+}
+
+.card {
+    position: relative;
+    background: transparent;
     display: flex;
-    background-color: var(--card-background);
-    width: 100%; /* Растягиваем на всю ширину родителя, который будет ограничен */
-    max-width: 400px; /* Устанавливаем ту же ширину, что и у блока поиска */
-    border-radius: var(--global-border-radius);
+    flex-direction: column;
+    overflow: hidden;
+    cursor: zoom-in;
 }
-.tabs .author-credit {
+
+.card__image {
+    width: 100%;
+    height: auto;
+    /* Maintain proper Pinterest flow - allow images to dictate height naturally or enforce aspect ratio */
+    aspect-ratio: 832 / 1216;
+    /* Original data */
+    object-fit: cover;
+    display: block;
+    background-color: var(--bg);
+    transition: filter 0.3s ease;
+}
+
+/* Hover effect: dim image, show info */
+.card:hover .card__image {
+    filter: brightness(0.75);
+}
+
+.card__info {
+    width: 100%;
+    padding: 8px 4px 16px 4px;
+    background: transparent;
+    opacity: 1;
+    transition: color 0.2s ease;
+}
+
+.card:hover .card__info {
+    color: var(--text-muted);
+}
+
+.card__artist {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Metadata pill over cards */
+.works-count,
+.uniqueness-rank {
     position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 8px;
+    left: 8px;
+    font-size: 10px;
+    padding: 4px 6px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: var(--text);
+    line-height: 1;
 }
 
-.tab-button {
-    font-size: 15px;
-    font-weight: 600;
-    padding: 12px 24px;
-    border: none;
-    background-color: transparent;
-    color: var(--secondary-text-color); /* Убираем внутренний радиус */
-    border-radius: calc(var(--global-border-radius) - 4px); /* Чуть меньше основного для вложенности */
-    cursor: pointer;
-    transition: all 0.3s ease;
-    flex-grow: 1; /* Позволяем кнопкам равномерно занимать пространство */
-    text-align: center; /* Центрируем текст внутри кнопок */
-    text-decoration: none; /* Убираем подчеркивание у ссылки */
-}
-
-.tab-button.active {
-    background-color: var(--border-color);
-    border-radius: var(--global-border-radius); /* Применяем единый радиус */
-    color: var(--text-color);
+.uniqueness-rank {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--bg);
 }
 
 .gallery-grid.uniqueness-view .works-count {
     display: none;
 }
 
-/* Скрываем счетчик работ и ранг уникальности только на вкладке "Избранное" */
-.gallery-grid.favorites-view .card .works-count, .gallery-grid.favorites-view .card .uniqueness-rank {
+.gallery-grid:not(.uniqueness-view) .uniqueness-rank {
     display: none;
 }
 
-.uniqueness-rank {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    min-width: 36px; /* Минимальная ширина равна высоте, чтобы сохранять круг */
-    height: 36px;
-    padding: 0 6px; /* Добавляем отступы по бокам для текста */
-    background-color: rgba(10, 132, 255, 0.6); /* Акцентный цвет с прозрачностью */
-    border-radius: var(--global-border-radius); /* Половина высоты для создания "пилюли" */
-    display: none; /* По умолчанию скрыт */
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    user-select: none;
-}
-
-.gallery-grid.uniqueness-view .uniqueness-rank {
-    display: flex; /* Показываем только в режиме сортировки по уникальности */
-}
-
-.gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(var(--grid-columns, 5), 1fr);
-    gap: 20px;
-}
-
-.card {
-    background-color: var(--card-background);
-    border-radius: var(--global-border-radius);
-    overflow: hidden;
-    cursor: pointer;
-    position: relative;
-    transition: transform 0.2s ease-in-out;
-    -webkit-tap-highlight-color: transparent; /* Убирает синюю подсветку на мобильных при касании */
-}
-
-.card:hover {
-    transform: scale(1.03);
-}
-
-.card__image {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 832 / 1216;
-    object-fit: cover;
-    display: block;
-    background-color: var(--border-color);
-}
-
-.card__info {
-    padding-top: 2px;
-    padding-bottom: 2px;
-    text-align: center;
-}
-
-.card__artist {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--secondary-text-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
 
 .favorite-button {
     position: absolute;
     top: 12px;
     right: 12px;
-    width: 36px;
-    height: 36px;
-    background-color: rgba(0, 0, 0, 0.5);
+    width: 42px;
+    height: 42px;
+    background-color: rgba(0, 0, 0, 0.3);
     border: none;
     border-radius: 50%;
     cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    /* Убираем текстовый символ и используем SVG фон */
     font-size: 0;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='none' stroke='%23ffffff' stroke-width='32'%3E%3Cpath d='M352.92 80C288 80 256 144 256 144s-32-64-96.92-64c-52.76 0-94.54 44.14-95.08 96.81-1.1 109.33 86.73 187.08 183.67 277.65 6.19 5.89 13.73 8.54 21.33 8.54s15.14-2.65 21.33-8.54c96.94-90.57 184.77-168.32 183.67-277.65C447.46 124.14 405.68 80 352.92 80z'/%3E%3C/svg%3E");
+
+    /* Hollow Material Heart */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='48px' viewBox='0 -960 960 960' width='48px' fill='%23ffffff'%3E%3Cpath d='m480-121-41-37q-105.77-97.12-174.88-167.56Q195-396 154-451.5T96.5-552Q80-597 80-643q0-90.15 60.5-150.58Q201-854 290-854q57 0 105.5 27t84.5 78q42-54 89-79.5T670-854q89 0 149.5 60.42Q880-733.15 880-643q0 46-16.5 91T806-451.5Q765-396 695.88-325.56 626.77-255.12 521-158l-41 37Zm0-79q101.24-93 166.62-159.5Q712-426 750.5-476t54-89.14q15.5-39.13 15.5-77.72 0-66.14-42-108.64T670.22-794q-51.52 0-95.37 31.5T504-674h-49q-26-56-69.85-88-43.85-32-95.37-32Q224-794 182-751.5t-42 108.82q0 38.68 15.5 78.18 15.5 39.5 54 90T314-358q66 66 166 158Zm0-297Z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: center;
-    background-size: 55%;
-    transition: background-color 0.2s, transform 0.2s;
+    background-size: 28px;
+    transition: all 0.2s ease;
+    opacity: 0;
+}
+
+.card:hover .favorite-button {
+    opacity: 1;
 }
 
 .favorite-button:hover {
-    background-color: rgba(0, 0, 0, 0.7);
-    transform: scale(1.1);
+    background-color: rgba(0, 0, 0, 0.6);
 }
 
 .favorite-button.favorited {
-    background-color: rgba(10, 132, 255, 0.2); /* Используем акцентный цвет */
-    /* Заменяем на SVG с заливкой */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%230a84ff'%3E%3Cpath d='M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z'/%3E%3C/svg%3E");
-    background-size: 60%;
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.4);
+    /* Filled Material Heart in White */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' height='48px' viewBox='0 -960 960 960' width='48px' fill='%23ffffff'%3E%3Cpath d='m480-120-58-52q-101-91-167-157T150-447.5Q111-500 95.5-544T80-634q0-94 63-157t157-63q52 0 99 22t81 62q34-40 81-62t99-22q94 0 157 63t63 157q0 46-15.5 90T810-447.5Q771-395 705-329T538-172l-58 52Z'/%3E%3C/svg%3E");
+    border: none;
 }
 
 .favorite-button.remove-favorite {
-    font-size: 26px; /* Делаем крестик чуть больше */
-    background-color: rgba(0, 0, 0, 0.5); /* Стандартный фон */
-    color: #fff; /* Белый крестик */
-    background-image: none; /* Убираем фоновое изображение сердца */
+    opacity: 1;
+    font-size: 24px;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--text);
+    background-color: rgba(0, 0, 0, 0.8);
+    background-image: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.works-count {
+.info-button {
     position: absolute;
     top: 12px;
     left: 12px;
-    min-width: 36px; /* Минимальная ширина равна высоте, чтобы сохранять круг */
-    height: 36px;
-    padding: 0 6px; /* Добавляем отступы по бокам для текста */
-    background-color: rgba(0, 0, 0, 0.6);
-    border-radius: var(--global-border-radius); /* Половина высоты для создания "пилюли" */
+    width: 42px;
+    height: 42px;
+    background-color: rgba(0, 0, 0, 0.3);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    /* Предотвращаем выделение текста при клике */
-    user-select: none;
+    transition: all 0.2s ease;
+    opacity: 0;
 }
 
-.loader-container {
-    text-align: center;
-    padding: 20px;
+.card:hover .info-button {
+    opacity: 1;
 }
 
-.loader {
-    border: 4px solid var(--border-color);
-    border-top: 4px solid var(--accent-color);
+.info-button:hover {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* ==========================================================================
+ * UTILITIES
+ * ========================================================================== */
+
+/* Loaders and Toasts */
+#loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--border);
+    border-top-color: var(--text);
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
     animation: spin 1s linear infinite;
-    margin: 0 auto;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
-.toast {
+
+#toast-notification {
     position: fixed;
-    bottom: 30px;
+    bottom: 24px;
     left: 50%;
-    transform: translateX(-50%);
-    background-color: #333;
-    color: white;
-    padding: 14px 24px;
-    border-radius: var(--global-border-radius);
+    transform: translateX(-50%) translateY(20px);
+    background-color: var(--text);
+    color: var(--bg);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
-    z-index: 1000;
+    transition: all 0.3s ease;
+    z-index: 11000;
 }
 
-.toast.show {
+#toast-notification.show {
     opacity: 1;
     visibility: visible;
+    transform: translateX(-50%) translateY(0);
 }
 
-/* Кнопка "Наверх" */
-.scroll-to-top-btn {
+
+.scroll-to-top {
     position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 64px;
-    height: 64px;
-    background-color: var(--card-background);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
+    bottom: 24px;
+    right: 24px;
+    width: 40px;
+    height: 40px;
+    background: var(--accent-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
     border-radius: 50%;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    line-height: 1;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(20px);
-    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
-    z-index: 999;
+    transition: all 0.3s;
+    z-index: 50;
 }
 
-.scroll-to-top-btn.visible {
+.scroll-to-top.visible {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
-}
-.scroll-to-top-btn.visible {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
 }
 
-.scroll-to-top-btn:hover {
-    background-color: var(--border-color);
+.scroll-to-top:hover {
+    background: var(--text);
+    color: var(--bg);
 }
 
-/* Адаптивность */
-@media (max-width: 1200px) {
-    .gallery-grid { --grid-columns: 4; }
-}
-@media (max-width: 992px) {
-    .controls-container {
-        flex-wrap: wrap; /* Позволяем контролам переноситься */
-        justify-content: center; /* Центрируем содержимое */
-        gap: 15px; /* Уменьшаем отступ между блоками для мобильной версии */
-    }
-    .sort-jump-group {
-        order: 2; /* Ставим блок с фильтрами вторым */
-        flex-basis: 100%; /* Заставляем блок занять всю ширину для центрирования */
-        width: auto; /* Убираем фиксированную ширину, чтобы он мог центрироваться */
-        align-items: center; /* Центрируем его содержимое */
-        gap: 15px; /* Добавляем отступ между кнопками сортировки и TXT */
-    }
-    /* На мобильных центрируем кнопку TXT */
-    #txt-export-container {
-        justify-content: center;
-    }
-    /* На мобильных возвращаем центрирование для кнопок сортировки */
-    .sort-controls {
-        justify-content: center;
-    }
-    .search-input {
-        text-align: center; /* Центрируем текст на мобильных */
-    }
-    .search-wrapper {
-        width: 90%; /* Задаем ширину в процентах для адаптивности */
-        max-width: 360px; /* Делаем блок поиска короче табов для иерархии на планшетах */
-    }
-    .search-input-container { width: 100%; } /* Поле поиска занимает всю ширину своего нового родителя */
-    .jump-controls {
-        flex-basis: 100%;
-        justify-content: center;
-        display: flex; /* Добавляем flex для выравнивания */
-        justify-content: center; /* Центрируем содержимое (поле поиска) */
-    }
-    /* Скрываем слайдер на планшетах и телефонах */
-    .grid-controls { display: none; }
-    /* Скрываем текст "Sort by:" на мобильных, чтобы кнопки были по центру */
-    .sort-label {
-        display: none;
-    }
-    /* Скрываем новую кнопку на мобильных */
-    .right-controls-group {
-        display: none;
-    }
-    .search-and-import-wrapper {
-        flex-direction: column;
-        align-items: center;
-        width: 100%; /* Занимаем всю ширину, но добавим отступы */
-        padding: 0 10px; /* Добавляем отступы по бокам */
-    }
-    .header {
-        width: 100%;
-        /* Добавляем отступы по бокам и сохраняем нижний отступ для линии */
-        padding: 0 10px 20px; 
-    }
-    /* На мобильных устройствах скрываем контейнер, если он пуст */
-    #txt-export-container:empty {
-        display: none;
-    }
-    /* Скрываем подсказку о свайп-режиме на мобильных */
-    #swipe-continue-hint { display: none !important; }
-}
-@media (max-width: 768px) {
-    body { padding: 10px; }
-    .header { margin-bottom: 20px; }
-    .gallery-grid { --grid-columns: 2; } /* 2 колонки для планшетов */
-    .scroll-to-top-btn {
-        bottom: 70px; /* Поднимаем кнопку выше на мобильных */
-        right: 20px;
-        width: 56px;
-        height: 56px;
-    }
-    .favorite-button {
-        width: 44px;
-        height: 44px;
-        font-size: 22px;
-    }
-    .works-count {
-        min-width: 44px;
-        height: 44px;
-        border-radius: 22px; /* Половина высоты */
-        font-size: 15px;
-        top: 10px;
-        left: 10px;
-    }
-    .uniqueness-rank {
-        min-width: 44px;
-        height: 44px;
-        border-radius: 22px;
-        font-size: 15px;
-        top: 10px;
-        left: 10px;
-    }
-}
-@media (max-width: 480px) {
-    .gallery-grid { --grid-columns: 2; } /* 2 колонки для телефонов */
-    .favorite-button {
-        width: 32px;
-        height: 32px;
-        font-size: 16px;
-    }
-    .works-count {
-        min-width: 32px;
-        height: 32px;
-        border-radius: 16px;
-        font-size: 13px;
-    }
-    .uniqueness-rank {
-        min-width: 32px;
-        height: 32px;
-        border-radius: 16px;
-        font-size: 13px;
-    }
-    .favorite-button.remove-favorite {
-        font-size: 22px; /* Корректируем размер крестика */
-    }
+
+/* disabled states */
+.disabled {
+    opacity: 0.3;
+    pointer-events: none;
 }
 
-/* Стили для страницы About */
-.about-page {
-    max-width: 800px;
-    margin: 30px auto; /* Возвращаем стандартные отступы */
-    line-height: 1.7;
-    box-sizing: border-box; /* Чтобы padding не увеличивал max-width */
-}
-.about-page h2 {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 24px;
-    color: var(--text-color);
-}
 
-.about-page h3 {
-    font-size: 20px;
-    font-weight: 600;
-    margin-top: 30px;
-    margin-bottom: 16px;
-    color: var(--text-color);
-}
-
-.about-page p, .about-page li {
-    font-size: 16px;
-    color: var(--secondary-text-color);
-    margin-bottom: 16px;
-}
-
-.about-page ul {
-    list-style-position: inside;
-    padding-left: 10px;
-}
-
-.about-page strong {
-    color: var(--text-color);
-    font-weight: 600;
-}
-
-@media (max-width: 768px) {
-    .about-page {
-        margin: 20px 10px; /* Уменьшаем отступы на мобильных */
-    }
-}
-
-/* --- Author Credit --- */
-.top-info-container {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    display: flex;
-    align-items: center; /* Выравниваем по вертикали */
-    gap: 20px; /* Добавляем отступ между элементами */
-    background-color: var(--card-background);
-    padding: 10px 16px;
-    border-radius: var(--global-border-radius);
-    border: 1px solid var(--border-color);
-    z-index: 10;
-}
-
-.author-credit {
-    /* position: absolute; */ /* Больше не нужно */
-    /* right: 20px; */
-    /* top: 20px; */
-    color: var(--secondary-text-color);
-    font-size: 14px;
-    text-decoration: none;
-    z-index: 10; /* Теперь управляется родительским контейнером */
-}
-
-.support-button-top {
-    font-size: 14px; /* Размер шрифта */
-    font-weight: 700; /* Делаем текст жирным */
-    color: #fff; /* Белый цвет текста для контраста */
-    background-color: var(--accent-color); /* Сплошной акцентный цвет фона */
-    text-decoration: none;
-    padding: 6px 12px; /* Увеличиваем отступы для большей заметности */
-    border-radius: 10px; /* Слегка увеличим скругление */
-    border: none; /* Убираем рамку */
-    transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s; /* Плавные переходы для анимации */
-    box-shadow: 0 3px 10px rgba(10, 132, 255, 0.3); /* Добавляем тень для глубины */
-}
-
-.support-button-top:hover {
-    background-color: #007aff; /* Более яркий оттенок синего при наведении */
-    transform: translateY(-2px) scale(1.02); /* Слегка уменьшаем эффект увеличения */
-    box-shadow: 0 5px 15px rgba(10, 132, 255, 0.4); /* Усиливаем тень при наведении */
-}
-
-.author-credit span {
-    color: var(--text-color);
-    font-weight: 700;
-    transition: color 0.2s ease-in-out;
-}
-
-.author-credit:hover span {
-    color: var(--accent-color);
-}
-
-@media (max-width: 992px) {
-    .author-credit {
-    margin-bottom: 5px;
-    }
-    .top-info-container {
-        position: static; /* Возвращаем в поток документа */
-        margin: 0 auto 20px; /* Центрируем и добавляем отступ снизу */
-        width: fit-content; /* Ширина по содержимому */
-        max-width: 400px; /* Ограничиваем максимальную ширину, как у других элементов */
-        flex-direction: column; /* Элементы друг под другом для мобильных */
-        gap: 8px; /* Уменьшаем отступ между строками */
-        padding: 10px 15px; /* Немного увеличим отступы для лучшего вида */
-    }
-    .page-title-container {
-        padding-top: 0; /* Убираем отступ на мобильных */
-    }
-}
-
-/* --- Swipe Mode --- */
+/* ==========================================================================
+ * SWIPE MODE 
+ * ========================================================================== */
 .swipe-overlay {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(28, 28, 30, 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background-color: var(--bg);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-    z-index: 2000;
-    overflow: hidden;
+    transition: opacity 0.2s ease;
+    z-index: 9999;
 }
 
 .swipe-overlay.visible {
@@ -953,187 +626,287 @@ input[type="range"]::-webkit-slider-thumb {
 
 .swipe-header {
     position: absolute;
-    top: 20px; /* Задаем явный отступ сверху */
+    top: 24px;
     left: 0;
     width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* Убираем верхний и нижний padding, оставляем боковые */
-    padding: 0 20px;
-    color: var(--text-color);
-    z-index: 2002;
-}
-
-.swipe-header-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    padding: 0 40px;
+    z-index: 10001;
 }
 
 .swipe-favorites-counter {
+    font-size: 14px;
+    font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 16px;
-    font-weight: 600;
-    background-color: rgba(0, 0, 0, 0.4);
+    gap: 8px;
+    background: var(--accent-bg);
     padding: 6px 12px;
-    border-radius: var(--global-border-radius);
-    color: var(--text-color);
-    cursor: default;
-    user-select: none;
-}
-
-.swipe-favorites-icon {
-    color: var(--accent-color); /* Используем акцентный цвет */
+    border-radius: 4px;
+    border: 1px solid var(--border);
 }
 
 .swipe-artist-name {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-}
-
-.swipe-counter {
-    font-size: 16px;
-    font-weight: 600;
-    background-color: rgba(0, 0, 0, 0.4);
-    padding: 6px 12px;
-    border-radius: var(--global-border-radius);
-}
-
-.swipe-artist-name {
-    text-align: center;
-    font-size: 24px;
-    font-weight: 700;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    transition: color 0.3s ease;
+    transition: color 0.2s;
 }
 
 .swipe-artist-name.favorited-feedback {
-    color: var(--accent-color);
+    color: var(--text-muted);
 }
 
 .swipe-artist-name.copied-feedback {
-    color: var(--accent-color);
-    transition: color 0.1s ease-in-out;
+    color: #4CAF50;
+    /* Green flash for copy */
 }
 
+
 .swipe-close-btn {
-    font-size: 36px;
+    font-size: 32px;
+    font-weight: 300;
     line-height: 1;
-    color: var(--secondary-text-color);
-    background: none;
-    border: none;
-    cursor: pointer;
-    transition: color 0.2s, transform 0.2s;
+    color: var(--text-muted);
 }
 
 .swipe-close-btn:hover {
-    color: var(--text-color);
-    transform: scale(1.1);
+    color: var(--text);
 }
 
 .swipe-container {
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
-    gap: 40px;
+    position: relative;
+    overflow: hidden;
 }
 
+.swipe-image {
+    position: absolute;
+    max-height: 80vh;
+    max-width: 80vw;
+    object-fit: contain;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
+}
+
+.swipe-image--current {
+    transform: scale(1);
+    opacity: 1;
+    z-index: 10000;
+}
+
+.swipe-image--prev {
+    transform: scale(0.85) translateX(-60vw);
+    opacity: 0.3;
+}
+
+.swipe-image--next {
+    transform: scale(0.85) translateX(60vw);
+    opacity: 0.3;
+}
+
+/* Feedback heart animation */
 .swipe-like-feedback {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0);
     opacity: 0;
-    z-index: 2005;
+    z-index: 10005;
     pointer-events: none;
-    transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .swipe-like-feedback.show {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
+    animation: quick-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes quick-pop {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+    }
 }
 
 .swipe-like-feedback .heart {
-    width: 150px;
-    height: 150px;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%230a84ff'%3E%3Cpath d='M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z'/%3E%3C/svg%3E") center no-repeat;
-    background-size: contain;
-    filter: drop-shadow(0 5px 15px rgba(10, 132, 255, 0.4));
-    animation: swipe-heart-beat 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-@keyframes swipe-heart-beat {
-    0% { transform: scale(0.5); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
-}
-
-
-
-
-.swipe-container.swipe-transition .swipe-image {
-    transition: transform 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
-}
-
-.swipe-image {
-    max-height: 85vh;
-    max-width: 85vw;
-    object-fit: contain;
-    border-radius: var(--global-border-radius);
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-}
-
-.swipe-image--current {
-    transform: scale(1);
-    opacity: 1;
-    z-index: 2001;
-}
-
-.swipe-image--prev,
-.swipe-image--next {
-    position: absolute;
-    transform: scale(0.8);
-    opacity: 0.5;
-    filter: blur(8px);
-    z-index: 2000;
-}
-
-.swipe-image--prev {
-    transform: scale(0.8) translateX(-50vw);
-}
-
-.swipe-image--next {
-    transform: scale(0.8) translateX(50vw);
+    width: 100px;
+    height: 100px;
+    background: var(--text);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath d='M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z'/%3E%3C/svg%3E") no-repeat center;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath d='M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z'/%3E%3C/svg%3E") no-repeat center;
 }
 
 .swipe-hint {
     position: absolute;
-    bottom: 20px;
-    font-size: 16px;
-    color: var(--secondary-text-color);
-    background-color: rgba(0, 0, 0, 0.4);
-    padding: 6px 12px;
-    border-radius: var(--global-border-radius);
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    bottom: 32px;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
 }
 
 .swipe-hint kbd {
     font-family: inherit;
-    font-size: 15px;
     font-weight: 600;
-    background-color: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
-    padding: 2px 8px;
-    color: var(--text-color);
-    box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+    color: var(--text);
+    padding: 0 4px;
+}
+
+/* ==========================================================================
+ * ARTIST DETAILS - SPA PAGE VIEW
+ * ========================================================================== */
+
+/* Back button row */
+.details-page-header {
+    margin-bottom: 24px;
+}
+
+.details-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.details-back-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.details-back-btn:hover {
+    color: var(--text);
+}
+
+/* Hero block inside gallery grid: image only */
+.details-hero {
+    grid-column: 1 / span var(--detail-hero-cols, 2);
+    grid-row: 1 / span var(--detail-hero-rows, 3);
+    overflow: hidden;
+    padding-right: 16px;
+    /* slight gap between hero image and side cards */
+}
+
+.details-hero .details-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 832 / 1216;
+    object-fit: cover;
+    display: block;
+}
+
+/* Info panel: positioned explicitly by JS, content left-aligned */
+.details-info-panel {
+    align-self: start;
+    padding: 4px 0;
+    max-width: 360px;
+}
+
+.details-info-panel h2 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 2px;
+    color: var(--text);
+}
+
+.details-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+/* Action Buttons Grid */
+.details-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.detail-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 10px;
+    border-radius: var(--radius);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    transition: all 0.2s;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.detail-action-btn:hover {
+    border-color: var(--border-light);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+}
+
+#details-copy-btn,
+#details-favorite-btn {
+    grid-column: 1 / -1;
+}
+
+.detail-action-btn.primary {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+}
+
+.detail-action-btn.primary:hover {
+    background: #e6e6e6;
+    color: var(--bg);
+    border-color: #e6e6e6;
+}
+
+.detail-action-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Side cards: cards next to the hero image, aligned to bottom */
+.side-card.card {
+    align-self: end;
+}
+
+
+.side-card.card .card__info {
+    padding-bottom: 0;
+}
+
+@media (max-width: 600px) {
+    .details-hero {
+        grid-column: 1 / -1;
+        grid-row: span 1;
+    }
 }

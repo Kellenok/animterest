@@ -1,53 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Anima 2B Style Explorer | Visual Artist Guide for AI Art</title>
-    <meta name="description" content="Learn about Anima 2B Style Explorer, a database of over 20,000 artist styles for the Anima 2B model. Explore Danbooru-based weights and visual previews.">
-    <link rel="stylesheet" href="app/style.css">
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "AboutPage",
-      "mainEntity": {
-        "@type": "SoftwareApplication",
-        "name": "Anima 2B Style Explorer",
-        "applicationCategory": "MultimediaDesignApplication",
-        "description": "Visual library and prompt guide for Anima 2B model artist styles.",
-        "operatingSystem": "Web Browser"
-      }
-    }
-    </script>
+    <title>About - Anima 2B Explorer</title>
+    <link rel="stylesheet" href="app/style.css?v=22">
+    <style>
+        .about-content {
+            max-width: 640px;
+            /* Optimal reading width */
+            margin: 0 auto;
+            padding: 80px 24px;
+        }
+
+        .about-content h2 {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .about-content h3 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-top: 48px;
+            margin-bottom: 16px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .about-content p,
+        .about-content li {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .about-content strong {
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .about-content ul {
+            padding-left: 20px;
+            margin-bottom: 24px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 48px;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--text);
+        }
+    </style>
 </head>
+
 <body>
-    <div class="top-info-container">
-        <a href="https://github.com/ThetaCursed" class="author-credit" title="Created by ThetaCursed" target="_blank" rel="noopener noreferrer">Created by <span>ThetaCursed</span></a>
-        <a href="https://app.lava.top/products/17f881bc-a113-413a-9bde-9e59287f4dfb/eb748d4e-7c34-47fd-80fd-8ef86946ae85" class="support-button-top" target="_blank" rel="noopener noreferrer">Support the project ❤️</a>
-    </div>
-    <header class="header">
-        <nav class="tabs">
-            <a href="index.html" class="tab-button">Gallery</a>
-            <a href="about.html" class="tab-button active">About</a>
-        </nav>
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+        <div class="nav-left">
+            <h1 class="logo">Anima 2B</h1>
+            <span class="logo-divider">/</span>
+            <span class="logo-subtitle">About</span>
+        </div>
+
+        <div class="nav-right">
+            <a href="https://app.lava.top/products/17f881bc-a113-413a-9bde-9e59287f4dfb/eb748d4e-7c34-47fd-80fd-8ef86946ae85"
+                class="support-btn" target="_blank" rel="noopener noreferrer">Support</a>
+        </div>
     </header>
 
-    <div class="about-page">
-        <h2>About the Project</h2>
-        <h3>Anima 2B Style Explorer: The Ultimate Visual Guide for AI Artists</h3>
-        <p>Anima 2B Style Explorer is an interactive visual database designed to unlock the full potential of the Anima 2B parameter model by CircleStone Labs. This tool serves as a bridge between complex AI training data and creative prompt engineering, featuring a curated collection of over 20,000+ artist styles indexed from the Danbooru ecosystem.</p>
-        <h3>Key Features</h3>
-        <ul>
-            <li><strong>Standardized Visual Benchmarking:</strong> Every preview is generated using a fixed control prompt. This allows you to compare brushwork, lighting, and composition across thousands of artists without distracting variables.</li>
-            <li><strong>Dataset Transparency:</strong> We display the Approximate Training Image Count for each style. This number represents the volume of data the model processed for a specific tag, helping you predict the "strength" and stability of a style.</li>
-            <li><strong>One-Click Integration:</strong> Optimized for the Anima 2B model's unique syntax, our explorer allows you to copy the required @artist-name tags instantly.</li>
-        </ul>
-        <h3>Powered by Anima 2B & Danbooru</h3>
-        <p>The Anima 2B model represents a breakthrough in high-fidelity anime and artistic generation. Trained on millions of illustrations and over 800k high-quality images, it moves beyond synthetic data to capture the soul of genuine human creativity.</p>
-        <p>By utilizing Danbooru-based tagging, Anima allows for surgical precision in style application. Anima 2B Style Explorer organizes these tags into an intuitive interface, making it the premier resource for artists, hobbyists, and AI researchers using Stable Diffusion and ComfyUI.</p>
-        <h3>Why Use Anima 2B Style Explorer?</h3>
-        <p>In the world of AI generation, knowing the right "token" is only half the battle. Understanding how that token influences the final image is what separates a good prompt from a masterpiece.</p>
-    </div>
+    <main class="about-content">
+        <a href="index.html" class="back-link">&larr; Return to Explorer</a>
 
+        <h2>Visual Artist Guide for AI</h2>
+        <p>Welcome to the visual reference tool for the <strong>Anima 2B</strong> parameter model.</p>
+        <p>This library features over 20,000+ artist tags based on the Danbooru dataset. Our explorer provides visual
+            benchmarking for Stable Diffusion and ComfyUI users, showcasing how the model interprets different artistic
+            styles, from classic masters to modern illustrators.</p>
+
+        <h3>Core Features</h3>
+        <ul class="feature-list">
+            <li><strong>20,000+ Artist Styles</strong>: Comprehensive visual database generated with optimized
+                parameters in the Anima 2B model.</li>
+            <li><strong>High-Resolution Previews</strong>: Click on any card to view the generation in full detail. Use
+                left/right keys to navigate.</li>
+            <li><strong>Smart Sorting</strong>:
+                <ul>
+                    <li><strong>Name</strong>: Alphabetical navigation.</li>
+                    <li><strong>Uniqueness</strong>: Artists sorted by how distinct their visual fingerprint is.</li>
+                    <li><strong>Works</strong>: Sorted by number of works in the original dataset (popularity).</li>
+                </ul>
+            </li>
+            <li><strong>Favorites System</strong>: Click the heart to curate your personal prompt book. Export and
+                import your curation as JSON across devices.</li>
+            <li><strong>Text Export</strong>: Quickly export a raw `.txt` list of your favorite artists to drop straight
+                into ComfyUI wildcards.</li>
+            <li><strong>Search & Jump</strong>: Filter by specific artist names or jump to specific popularity ranks
+                instantly.</li>
+        </ul>
+
+        <h3>Technical Specs</h3>
+        <p>All images were generated purely via the prompt: <strong>1girl, artist_name</strong> to ensure the model's
+            base interpretation of the style is untainted by complex prompt engineering. CFG and steps were locked to
+            standard benchmarks.</p>
+
+        <h3>Support & Credits</h3>
+        <p>This explorer is maintained as a free resource for the AI art community. If you found it useful for your
+            prompting workflows, consider supporting the continued development mapping other datasets.</p>
+        <p>Created by <strong>ThetaCursed</strong>.</p>
+    </main>
+
+    <script src="app/data.js"></script>
+    <script src="app/app.js"></script>
 </body>
+
 </html>

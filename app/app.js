@@ -9,6 +9,8 @@
     const sortByNameBtn = document.getElementById('sort-by-name');
     const sortByWorksBtn = document.getElementById('sort-by-works');
     const sortByUniquenessBtn = document.getElementById('sort-by-uniqueness');
+    const sortByRandomBtn = document.getElementById('sort-by-random');
+    const sortByDateBtn = document.getElementById('sort-by-date');
     const scrollToTopBtn = document.getElementById('scroll-to-top');
     const gridSlider = document.getElementById('grid-slider');
     const gridSliderValue = document.getElementById('grid-slider-value');
@@ -16,6 +18,7 @@
     const swipeLaunchControls = document.querySelector('.swipe-launch-controls');
     const favoritesControlsWrapper = document.getElementById('favorites-controls-wrapper');
     const styleCounter = document.getElementById('style-counter');
+    const favoritesCounter = document.getElementById('favorites-counter');
     const txtExportContainer = document.getElementById('txt-export-container');
     const importFavoritesInput = document.getElementById('import-favorites-input');
     const swipeContinueHint = document.getElementById('swipe-continue-hint'); // Новый элемент
@@ -25,6 +28,28 @@
     const searchWrapper = document.querySelector('.search-wrapper');
     const sortControls = document.querySelector('.sort-controls');
     const clearSearchBtn = document.getElementById('clear-search-btn');
+
+    // Details / SPA Elements
+    const viewGallery = document.getElementById('view-gallery');
+    const viewArtist = document.getElementById('view-artist');
+    const controlsContainerWrapper = document.getElementById('controls-container');
+    const detailsBackBtn = document.getElementById('details-back-btn');
+    const detailsImage = document.getElementById('details-image');
+    const detailsArtistName = document.getElementById('details-artist-name');
+    const detailsWorksCount = document.getElementById('details-works-count');
+    const detailsCopyBtn = document.getElementById('details-copy-btn');
+    const detailsFavoriteBtn = document.getElementById('details-favorite-btn');
+    const detailsDanbooruLink = document.getElementById('details-danbooru-link');
+    const detailsGelbooruLink = document.getElementById('details-gelbooru-link');
+    const detailsGrid = document.getElementById('details-grid');
+    const detailsHero = document.getElementById('details-hero');
+
+    let currentDetailsItem = null;
+    let similarArtistsObserver = null;
+    let availableSimilarItems = [];
+    let isSimilarItemsLoading = false;
+    let similarData = null; // Loaded from similar.json (embedding-based)
+
     let allItems = [];
     let itemsSortedByWorks = []; // Новый массив для быстрого поиска по работам
     let favorites = new Map(); // Используем Map для хранения {id: timestamp}
@@ -33,7 +58,8 @@
     let startIndexOffset = 0; // Смещение для "перехода к номеру"
     const itemsPerPage = 20;
     let searchTerm = ''; // 'gallery', 'favorites'
-    let currentView = 'gallery'; // 'gallery', 'favorites', or 'about'
+    let currentView = 'gallery'; // 'gallery' или 'favorites'
+    let lastGalleryScroll = 0; // Сохраняем скролл перед переходом в детали
     let sortType = 'name'; // 'name', 'works', or 'uniqueness'
     let sortDirection = 'desc'; // 'asc' or 'desc'
     let isLoading = false;
@@ -61,8 +87,8 @@
     // --- Определение базового пути для изображений ---
     // Проверяем, запущено ли приложение с веб-сервера (http/https) или локально (file:)
     const isOnline = window.location.protocol.startsWith('http');
-    const imageBasePath = isOnline 
-        ? 'https://cdn.statically.io/gh/ThetaCursed/Anima-Style-Explorer/main/' 
+    const imageBasePath = isOnline
+        ? 'https://cdn.statically.io/gh/ThetaCursed/Anima-Style-Explorer/main/'
         : '';
 
 
@@ -164,7 +190,7 @@
         card.dataset.id = item.id;
 
         const isFavorited = favorites.has(item.id);
-        
+
         // Если активна сортировка по уникальности, показываем ранг
         const rankHTML = sortType === 'uniqueness' && item.uniquenessRank
             ? `<div class="uniqueness-rank" title="Uniqueness Rank">#${item.uniquenessRank}</div>`
@@ -205,11 +231,12 @@
             </div>
             ${rankHTML}
             ${favButtonHTML}
+            <button class="info-button" aria-label="View artist details" title="View details">i</button>
         `;
 
-        // Копирование имени по клику на карточку (кроме кнопки "избранное")
+        // Копирование имени по клику на карточку (кроме кнопки "избранное" и "инфо")
         card.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('favorite-button')) {
+            if (!e.target.closest('.favorite-button') && !e.target.closest('.info-button')) {
                 navigator.clipboard.writeText('@' + item.artist).then(() => {
                     showToast('Artist name copied to clipboard!');
                 });
@@ -219,8 +246,16 @@
         // Обработка клика по кнопке "избранное"
         const favButton = card.querySelector('.favorite-button');
         favButton.addEventListener('click', (e) => {
-            e.stopPropagation(); // Предотвращаем копирование имени
+            e.stopPropagation(); // Предотвращаем копирование имени и открытие модалки
             toggleFavorite(item, favButton);
+        });
+
+        // Обработка клика по кнопке "инфо"
+        const infoButton = card.querySelector('.info-button');
+        infoButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Instead of opening modal directly, update hash route
+            window.location.hash = '#/artist/' + encodeURIComponent(item.artist);
         });
 
         return card;
@@ -243,15 +278,22 @@
 
                 // Создаем заранее отсортированную копию для функции jump
                 itemsSortedByWorks = [...allItems].sort((a, b) => b.worksCount - a.worksCount);
+
+                // Load similarity data from global variable (similar.js)
+                if (typeof similarArtistsData !== 'undefined') {
+                    similarData = similarArtistsData;
+                    console.log(`[OK] Loaded similarArtistsData (${Object.keys(similarData).length} artists)`);
+                }
             }
 
             // Запускаем отладочную проверку изображений
             await debug_checkImagePaths();
 
             // Обновляем счетчик стилей
-            styleCounter.innerHTML = `Artist-based styles: <span class="style-count-number">${allItems.length.toLocaleString('en-US')}</span>`;
+            styleCounter.textContent = allItems.length.toLocaleString('en-US');
 
             await loadFavoritesFromDB(); // Загружаем избранное из IndexedDB
+            favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
             renderView();
         } catch (error) {
             console.error('Failed to load gallery data:', error);
@@ -300,43 +342,51 @@
         // --- Конец логики ---
 
         window.scrollTo({ top: 0, behavior: 'instant' }); // Мгновенная прокрутка вверх при ререндере
-        
-        // 1. Сортируем данные
-        let sortedItems = [...allItems];
+
+        // 1. Фильтруем по избранному ДО сортировки, чтобы случайная сортировка (и другие) 
+        // применялись только к нужному подмножеству
+        let baseItems = [...allItems];
+        if (currentView === 'favorites') {
+            baseItems = baseItems.filter(item => favorites.has(item.id));
+        }
+
+        // 2. Сортируем данные
+        let sortedItems = [...baseItems];
         const direction = sortDirection === 'asc' ? 1 : -1;
 
         if (sortType === 'name') {
             sortedItems.sort((a, b) => a.artist.localeCompare(b.artist) * direction);
         } else if (sortType === 'works') {
-            // Для 'works', 'desc' - это b-a, 'asc' - это a-b.
-            // direction = -1 для 'desc', поэтому (a-b) * -1 = b-a.
             sortedItems.sort((a, b) => (a.worksCount - b.worksCount) * direction);
         } else if (sortType === 'uniqueness') {
-            // Для 'uniqueness' направление всегда 'desc'
-            sortedItems.sort((a, b) => (b.uniqueness_score || 0) - (a.uniqueness_score || 0));
+            sortedItems.sort((a, b) => ((a.uniqueness_score || 0) - (b.uniqueness_score || 0)) * direction);
+        } else if (sortType === 'date') {
+            sortedItems.sort((a, b) => ((favorites.get(a.id) || 0) - (favorites.get(b.id) || 0)) * direction);
+        } else if (sortType === 'random') {
+            // Fisher-Yates shuffle
+            for (let i = sortedItems.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [sortedItems[i], sortedItems[j]] = [sortedItems[j], sortedItems[i]];
+            }
         }
-        
+
         // Добавляем ранг после основной сортировки, но до других фильтров
         sortedItems.forEach((item, index) => {
             if (sortType === 'uniqueness') {
                 item.uniquenessRank = index + 1;
             } else {
-                // Удаляем ранг, если он не нужен, чтобы он не отображался в других видах
                 delete item.uniquenessRank;
             }
         });
 
-        // 2. Фильтруем по избранному, если нужно (до поиска, чтобы поиск работал по избранным)
-        if (currentView === 'favorites') {
-            sortedItems = sortedItems.filter(item => favorites.has(item.id));
-            // Сортируем избранное по временной метке (новые сверху)
-            sortedItems.sort((a, b) => favorites.get(b.id) - favorites.get(a.id));
-        }
+        // 3. Отключаем старую сортировку по метке времени для Избранного (используем выбранный sortType)
+        // Если нужен дефолт по времени добавления, можно добавить 'date_added' как тип.
+        // Пока что используем общую логику сортировки.
 
-        // 3. Фильтруем по строке поиска
+        // 4. Фильтруем по строке поиска
         let filteredItems;
         if (searchTerm) {
-            filteredItems = sortedItems.filter(item => 
+            filteredItems = sortedItems.filter(item =>
                 item.artist.toLowerCase().includes(searchTerm)
             );
         } else {
@@ -368,7 +418,7 @@
             galleryContainer.appendChild(p);
             return;
         }
-        
+
         loadMoreItems();
     }
 
@@ -428,6 +478,7 @@
             // Удалить из избранного
             store.delete(item.id);
             favorites.delete(item.id);
+            favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
             showToast('Removed from favorites');
             if (currentView === 'gallery') {
                 // button.textContent = '♡'; // Теперь управляется через CSS
@@ -440,6 +491,7 @@
             const favItem = { id: item.id, timestamp: Date.now() };
             store.put(favItem);
             favorites.set(item.id, favItem.timestamp);
+            favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
             showToast('Added to favorites');
             // В галерее меняем иконку на звезду
             // button.textContent = '♥'; // Теперь управляется через CSS
@@ -467,8 +519,6 @@
                     if (favorites.size === 0) {
                         galleryContainer.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">No favorites yet.</p>';
                     }
-                    // Обновляем счетчик в реальном времени
-                    styleCounter.innerHTML = `Styles in Favorites: <span class="style-count-number">${favorites.size.toLocaleString('en-US')}</span>`;
                 }, { once: true }); // Событие сработает только один раз
             }
         }
@@ -561,12 +611,17 @@
         txtExportContainer.style.display = 'none';
         swipeContinueHint.style.display = 'none'; // Скрываем подсказку
         jumpControls.style.display = 'flex';
-        searchInput.parentElement.style.borderBottom = '1px solid var(--border-color)'; // Восстанавливаем разделитель
         swipeLaunchControls.style.display = 'flex';
         sortControls.style.display = 'flex';
+        sortByDateBtn.style.display = 'none';
+        if (sortType === 'date') {
+            sortType = 'name';
+            sortDirection = 'asc';
+            updateSortButtonsUI();
+        }
         currentView = 'gallery';
-        // Обновляем счетчик для отображения общего количества стилей
-        styleCounter.innerHTML = `Artist-based styles: <span class="style-count-number">${allItems.length.toLocaleString('en-US')}</span>`;
+
+        styleCounter.textContent = allItems.length.toLocaleString('en-US');
 
         renderView();
 
@@ -581,22 +636,22 @@
         e.preventDefault(); // Предотвращаем переход по ссылке
         if (currentView === 'favorites') return;
         setActiveTab(tabFavorites);
-        favoritesControlsWrapper.style.display = 'flex'; // Показываем кнопки импорта/экспорта
+        favoritesControlsWrapper.style.display = 'flex'; // Показываем кнопки импорта/экспорта (now column layout)
         txtExportContainer.style.display = 'flex';
         swipeContinueHint.style.display = 'block'; // Показываем подсказку
-        jumpControls.style.display = 'none';
-        searchInput.parentElement.style.borderBottom = 'none'; // Убираем разделитель, т.к. поле Jump скрыто
+        jumpControls.style.display = 'flex'; // ТЕПЕРЬ ПОКАЗЫВАЕМ
         swipeLaunchControls.style.display = 'none';
-        sortControls.style.display = 'none'; // Скрываем сортировку для избранного
+        sortControls.style.display = 'flex'; // ТЕПЕРЬ ПОКАЗЫВАЕМ
+        sortByDateBtn.style.display = 'inline-block';
         currentView = 'favorites';
 
         // Обновляем счетчик для отображения количества избранных
-        styleCounter.innerHTML = `Styles in Favorites: <span class="style-count-number">${favorites.size.toLocaleString('en-US')}</span>`;
+        favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
 
         // Сбрасываем состояние "перехода", так как он не применяется к избранному
         startIndexOffset = 0;
         jumpInput.value = '';
-        
+
         // Также сбрасываем состояние перехода и разблокируем другие контролы
         resetJumpState(false); // false - чтобы не вызывать renderView() повторно
 
@@ -648,8 +703,8 @@
                 await loadFavoritesFromDB(); // Перезагружаем избранное из БД
                 renderView(); // Обновляем отображение
                 // Обновляем счетчик после импорта
-                styleCounter.innerHTML = `Styles in Favorites: <span class="style-count-number">${favorites.size.toLocaleString('en-US')}</span>`;
-                showToast(importedCount > 0 
+                favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
+                showToast(importedCount > 0
                     ? `${importedCount} new favorites imported!`
                     : 'No new favorites to import.');
 
@@ -672,8 +727,8 @@
 
         // Преобразуем Map в массив объектов, содержащих только id и timestamp
         const favoritesToSave = Array.from(favorites.entries())
-          .map(([id, timestamp]) => ({ id, timestamp }))
-          .sort((a, b) => b.timestamp - a.timestamp); // Сортируем по дате добавления
+            .map(([id, timestamp]) => ({ id, timestamp }))
+            .sort((a, b) => b.timestamp - a.timestamp); // Сортируем по дате добавления
 
         const exportData = {
             metadata: {
@@ -747,7 +802,7 @@
         updateControlsState(); // Обновляем состояние контролов
         renderView();
     });
-    
+
     clearSearchBtn.addEventListener('click', () => {
         searchInput.value = '';
         // Инициируем событие 'input', чтобы сработала вся логика очистки
@@ -797,7 +852,13 @@
                 previousSortDirection = sortDirection;
             }
 
-            const foundIndex = itemsSortedByWorks.findIndex(item => item.worksCount <= targetWorksCount);
+            // Ищем с учетом закладок, если мы на странице избранного
+            let contextItems = itemsSortedByWorks;
+            if (currentView === 'favorites') {
+                contextItems = itemsSortedByWorks.filter(item => favorites.has(item.id));
+            }
+
+            const foundIndex = contextItems.findIndex(item => item.worksCount <= targetWorksCount);
 
             if (foundIndex === -1) {
                 showToast('No artists found with that many works or less.');
@@ -847,7 +908,7 @@
         if (shouldRender) {
             renderView();
         }
-        
+
         // Убедимся, что кнопка сброса скрыта, если поле ввода уже пустое
         if (!jumpInput.value) {
             clearJumpBtn.style.display = 'none';
@@ -884,37 +945,322 @@
 
     clearJumpBtn.addEventListener('click', () => resetJumpState());
 
+    // --- Single Page Application Routing ---
+    function handleHashChange() {
+        const hash = window.location.hash;
+
+        if (hash.startsWith('#/artist/')) {
+            // Store scroll before showing details
+            if (viewArtist.classList.contains('hidden')) {
+                lastGalleryScroll = window.scrollY;
+            }
+
+            // Render Artist View
+            const encodedArtistName = hash.replace('#/artist/', '');
+            const artistName = decodeURIComponent(encodedArtistName);
+            const artistItem = allItems.find(item => item.artist === artistName);
+
+            if (artistItem) {
+                renderArtistView(artistItem);
+            } else {
+                window.location.hash = '';
+            }
+        } else {
+            // Returning to Gallery or Favorites
+            viewArtist.classList.add('hidden');
+            viewGallery.classList.remove('hidden');
+            controlsContainerWrapper.style.display = '';
+
+            if (hash === '#/favorites') {
+                if (currentView !== 'favorites') tabFavorites.click();
+            } else {
+                if (currentView !== 'gallery') tabGallery.click();
+            }
+
+            // Restore scroll position
+            if (lastGalleryScroll > 0) {
+                setTimeout(() => {
+                    window.scrollTo({ top: lastGalleryScroll, behavior: 'instant' });
+                    lastGalleryScroll = 0;
+                }, 50);
+            }
+        }
+    }
+
+    // --- Artist Details View Logic ---
+    function renderArtistView(item) {
+        currentDetailsItem = item;
+
+        // Hide main gallery, show artist view
+        viewGallery.classList.add('hidden');
+        controlsContainerWrapper.style.display = 'none';
+        viewArtist.classList.remove('hidden');
+
+        // Setup image and text
+        detailsImage.src = item.image;
+        detailsArtistName.textContent = item.artist;
+        detailsWorksCount.textContent = item.worksCount.toLocaleString('en-US');
+
+        // Setup Favorite state
+        updateDetailsFavoriteButton(item.id);
+
+        // Setup External Links
+        let formattedName = item.artist.replace(/\\/g, '').replace(/ /g, '_');
+        const linkTag = encodeURIComponent(formattedName);
+        detailsDanbooruLink.href = `https://danbooru.donmai.us/posts?tags=${linkTag}`;
+        detailsGelbooruLink.href = `https://gelbooru.com/index.php?page=post&s=list&tags=${linkTag}`;
+
+        // --- Calculate hero column span based on grid ---
+        const totalCols = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--grid-columns') || '6', 10);
+        // Measure actual column width from the grid
+        const gridWidth = detailsGrid.clientWidth;
+        const gap = 2; // gallery-grid gap is 2px
+        const colWidth = (gridWidth - (totalCols - 1) * gap) / totalCols;
+
+        // Find N columns where N*colWidth is between 300-500px
+        let heroCols = 2;
+        for (let n = 1; n <= totalCols; n++) {
+            const w = n * colWidth + (n - 1) * gap;
+            if (w >= 300 && w <= 500) {
+                heroCols = n;
+                break;
+            }
+            if (w > 500) {
+                heroCols = Math.max(1, n - 1);
+                break;
+            }
+        }
+        // Ensure at least 300px: if 1 col < 300, pick more
+        const heroPixelWidth = heroCols * colWidth + (heroCols - 1) * gap;
+        if (heroPixelWidth < 300 && heroCols < totalCols) {
+            heroCols = Math.min(totalCols, heroCols + 1);
+        }
+
+        // Row span: hero is image-only now (info is separate grid item)
+        const cardVisualHeight = colWidth * (1216 / 832) + 30;
+        const heroImageHeight = heroPixelWidth * (1216 / 832);
+        const heroRows = Math.max(2, Math.ceil(heroImageHeight / (cardVisualHeight + gap)));
+
+        // Apply CSS vars to the grid
+        const infoCols = Math.min(3, Math.max(1, totalCols - heroCols));
+        detailsGrid.style.setProperty('--detail-hero-cols', heroCols);
+        detailsGrid.style.setProperty('--detail-hero-rows', heroRows);
+        detailsGrid.style.setProperty('--detail-info-cols', infoCols);
+
+        // Explicitly position info panel: right next to hero, spanning to end of row
+        // Info panel spans rows 1 to (heroRows-1), so cards only appear at the bottom
+        const infoPanel = detailsGrid.querySelector('.details-info-panel');
+        infoPanel.style.gridColumn = `${heroCols + 1} / -1`;
+        infoPanel.style.gridRow = `1 / ${heroRows}`;
+
+        // Disconnect previous observer
+        if (similarArtistsObserver) {
+            similarArtistsObserver.disconnect();
+        }
+
+        // Setup Similar Artists — use embedding similarity if available
+        const itemId = String(item.id);
+        console.log('[DEBUG] similarData exists:', !!similarData, '| itemId:', itemId, '| found:', similarData ? !!similarData[itemId] : 'N/A', '| keys sample:', similarData ? Object.keys(similarData).slice(0, 3) : 'N/A');
+        if (similarData && similarData[itemId]) {
+            // Build ordered list from similarity data
+            const similarIds = similarData[itemId];
+            const idToItem = new Map(allItems.map(i => [String(i.id), i]));
+            availableSimilarItems = similarIds
+                .map(id => idToItem.get(String(id)))
+                .filter(i => i != null);
+            // No random fallback — strictly style-based matches
+        } else {
+            // No similarity data for this artist — keep list empty or fallback to empty
+            availableSimilarItems = [];
+        }
+
+        // Clear old cards from the grid (keep the hero)
+        const existingCards = detailsGrid.querySelectorAll('.card, #similar-observer-sentinel');
+        existingCards.forEach(c => c.remove());
+
+        // Calculate how many cards fit in the side area (next to hero, last row)
+        const sideCardCount = totalCols - heroCols;
+
+        loadMoreSimilarArtists(24); // Initial batch
+
+        // Mark the first N cards as side-cards for special styling
+        const allCards = detailsGrid.querySelectorAll('.card');
+        for (let i = 0; i < Math.min(sideCardCount, allCards.length); i++) {
+            allCards[i].classList.add('side-card');
+        }
+
+        setupSimilarArtistsObserver();
+
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    // This is kept for backward compat if called, but navigation handles cleanup
+    function closeArtistDetails() {
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            window.location.hash = ''; // Fallback
+        }
+    }
+
+    function updateDetailsFavoriteButton(itemId) {
+        const isFavorited = favorites.has(itemId);
+        if (isFavorited) {
+            detailsFavoriteBtn.classList.add('active');
+            detailsFavoriteBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+                Unfavorite
+            `;
+            detailsFavoriteBtn.style.color = '#ff4b4b';
+        } else {
+            detailsFavoriteBtn.classList.remove('active');
+            detailsFavoriteBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                </svg>
+                Favorite
+            `;
+            detailsFavoriteBtn.style.color = '';
+        }
+    }
+
+    function loadMoreSimilarArtists(count) {
+        if (isSimilarItemsLoading || availableSimilarItems.length === 0) return;
+        isSimilarItemsLoading = true;
+
+        const itemsToAdd = availableSimilarItems.splice(0, count);
+
+        const oldSentinel = document.getElementById('similar-observer-sentinel');
+        if (oldSentinel) oldSentinel.remove();
+
+        itemsToAdd.forEach(item => {
+            const card = createCard(item);
+            detailsGrid.appendChild(card);
+        });
+
+        if (availableSimilarItems.length > 0) {
+            const sentinel = document.createElement('div');
+            sentinel.id = 'similar-observer-sentinel';
+            sentinel.style.height = '10px';
+            sentinel.style.gridColumn = '1 / -1';
+            detailsGrid.appendChild(sentinel);
+
+            if (similarArtistsObserver) {
+                similarArtistsObserver.observe(sentinel);
+            }
+        }
+
+        isSimilarItemsLoading = false;
+    }
+
+    function setupSimilarArtistsObserver() {
+        const options = {
+            root: null, // Observe against viewport since it's a normal page now
+            rootMargin: '200px', // Load before reaching the very bottom
+            threshold: 0
+        };
+
+        similarArtistsObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    loadMoreSimilarArtists(6); // Load 6 more items when reaching the bottom
+                }
+            });
+        }, options);
+
+        // Initially observe the sentinel if it was created
+        const sentinel = document.getElementById('similar-observer-sentinel');
+        if (sentinel) {
+            similarArtistsObserver.observe(sentinel);
+        }
+    }
+
+    // Listen for History / Hash changes
+    window.addEventListener('hashchange', handleHashChange);
+
+    // Details Modal Event Listeners
+    detailsBackBtn.addEventListener('click', closeArtistDetails);
+
+    detailsCopyBtn.addEventListener('click', () => {
+        if (currentDetailsItem) {
+            navigator.clipboard.writeText('@' + currentDetailsItem.artist).then(() => {
+                showToast('Artist name copied to clipboard!');
+            });
+        }
+    });
+
+    detailsFavoriteBtn.addEventListener('click', () => {
+        if (currentDetailsItem) {
+            // Find the main card button if it exists to keep animation consistent,
+            // otherwise just pass a dummy button
+            const cards = document.querySelectorAll('.card');
+            let mainFavBtn = null;
+            cards.forEach(card => {
+                if (card.dataset.id === String(currentDetailsItem.id)) {
+                    mainFavBtn = card.querySelector('.favorite-button');
+                }
+            });
+
+            if (mainFavBtn) {
+                toggleFavorite(currentDetailsItem, mainFavBtn);
+            } else {
+                // If card is not rendered in current view, pass a dummy element
+                toggleFavorite(currentDetailsItem, document.createElement('button'));
+            }
+
+            // Update button state in modal
+            updateDetailsFavoriteButton(currentDetailsItem.id);
+        }
+    });
+
+    // Handle Escape key to go back
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && window.location.hash.startsWith('#/artist/')) {
+            closeArtistDetails();
+        }
+    });
+
+
     // --- Управление сортировкой ---
     function updateSortButtonsUI() {
         // Сброс состояния для обеих кнопок
-        [sortByNameBtn, sortByWorksBtn, sortByUniquenessBtn].forEach(btn => {
+        [sortByNameBtn, sortByWorksBtn, sortByUniquenessBtn, sortByRandomBtn, sortByDateBtn].forEach(btn => {
             btn.classList.remove('active');
-            btn.querySelector('.sort-arrow').textContent = '';
+            const arrow = btn.querySelector('.sort-arrow');
+            if (arrow) arrow.textContent = '';
         });
 
         // Обновляем состояние блокировки контролов
         updateControlsState();
-        
+
         // Обновляем активную кнопку и стрелку
         let activeBtn;
         if (sortType === 'name') {
             activeBtn = sortByNameBtn;
         } else if (sortType === 'works') {
             activeBtn = sortByWorksBtn;
+        } else if (sortType === 'random') {
+            activeBtn = sortByRandomBtn;
+        } else if (sortType === 'date') {
+            activeBtn = sortByDateBtn;
         } else { // uniqueness
             activeBtn = sortByUniquenessBtn;
         }
-        
+
         const arrow = activeBtn.querySelector('.sort-arrow');
         activeBtn.classList.add('active');
-        arrow.textContent = sortDirection === 'asc' ? '▲' : '▼';
+        if (sortType !== 'random') {
+            arrow.textContent = sortDirection === 'asc' ? '▲' : '▼';
+        }
     }
 
     function handleSortClick(clickedType) {
         // Если активируем "Uniqueness", сбрасываем все остальные фильтры
         if (clickedType === 'uniqueness' && sortType !== 'uniqueness') {
             resetJumpState(false); // Сбрасываем "Jump"
-            
+
             // Прямой сброс поиска вместо имитации клика для надежности
             if (searchInput.value !== '') {
                 searchInput.value = '';
@@ -923,17 +1269,14 @@
             }
         }
 
-        if (sortType === clickedType) {
-            // Если кликнули по активной кнопке, меняем направление,
-            // но для 'uniqueness' направление всегда 'desc' и не меняется.
-            if (clickedType !== 'uniqueness') {
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            }
+        if (sortType === clickedType && clickedType !== 'random') { // random should always trigger a re-sort
+            // Если кликнули по активной кнопке, меняем направление
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
             // Если кликнули по новой кнопке, активируем ее
             sortType = clickedType;
             // Устанавливаем направление по умолчанию
-            // Для 'name' - asc, для 'works' и 'uniqueness' - desc.
+            // Для 'name' - asc, для остальных - desc.
             sortDirection = sortType === 'name' ? 'asc' : 'desc';
         }
         updateSortButtonsUI();
@@ -944,12 +1287,18 @@
             localStorage.setItem(SORT_TYPE_KEY, sortType);
             localStorage.setItem(SORT_DIRECTION_KEY, sortDirection);
         }, 1000); // Задержка в 1 секунду
+
+        // Сбросить смещение страницы, если сортировка изменилась или мы перезапускаем random
+        startIndexOffset = 0;
+
         renderView();
     }
 
     sortByNameBtn.addEventListener('click', () => handleSortClick('name'));
     sortByWorksBtn.addEventListener('click', () => handleSortClick('works'));
     sortByUniquenessBtn.addEventListener('click', () => handleSortClick('uniqueness'));
+    sortByRandomBtn.addEventListener('click', () => handleSortClick('random'));
+    sortByDateBtn.addEventListener('click', () => handleSortClick('date'));
 
     // --- Конец управления сортировкой ---
 
@@ -1038,7 +1387,10 @@
 
     initDB()
         .then(() => {
-            loadInitialData();
+            loadInitialData().then(() => {
+                // Initial route parsing
+                handleHashChange();
+            });
         })
         .catch(err => {
             console.error(err);
