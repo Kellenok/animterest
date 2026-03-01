@@ -1315,7 +1315,7 @@
     function handleSortClick(clickedType) {
         // Если активируем "Uniqueness", сбрасываем все остальные фильтры
         if (clickedType === 'uniqueness' && sortType !== 'uniqueness') {
-            setJumpState(false); // Сбрасываем "Jump"
+            resetJumpState(false); // Сбрасываем "Jump"
 
             // Прямой сброс поиска вместо имитации клика для надежности
             if (searchInput.value !== '') {
