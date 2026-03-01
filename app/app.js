@@ -1076,12 +1076,15 @@
 
         function renderSimilarArtistsBlock() {
             let hasData = false;
-            try { if (typeof similarArtistsData !== 'undefined') hasData = true; } catch (e) { }
+            // Now checking the new cache instead of the massive global similarArtistsData
+            if (window.similarArtistsCache && window.similarArtistsCache[itemId]) {
+                hasData = true;
+            }
 
-            console.log('[DEBUG] similarData exists:', hasData, '| itemId:', itemId);
-            if (hasData && similarArtistsData[itemId]) {
-                // Build ordered list from similarity data
-                const similarIds = similarArtistsData[itemId];
+            console.log('[DEBUG] similarData exists in cache:', hasData, '| itemId:', itemId);
+            if (hasData) {
+                // Build ordered list from similarity data cache
+                const similarIds = window.similarArtistsCache[itemId];
                 const idToItem = new Map(allItems.map(i => [String(i.id), i]));
                 availableSimilarItems = similarIds
                     .map(id => idToItem.get(String(id)))
@@ -1113,13 +1116,27 @@
             setupSimilarArtistsObserver();
         }
 
-        let isDataLoaded = false;
-        try { if (typeof similarArtistsData !== 'undefined') isDataLoaded = true; } catch (e) { }
+        // Define JSONP callback globally if not already defined
+        if (!window.handleSimilarData) {
+            window.handleSimilarData = function (loadedItemId, similarIds) {
+                // Cache the result
+                if (!window.similarArtistsCache) {
+                    window.similarArtistsCache = {};
+                }
+                window.similarArtistsCache[loadedItemId] = similarIds;
 
-        if (isDataLoaded) {
+                // Only render if we haven't navigated away from this artist
+                if (!viewArtist.classList.contains('hidden') && currentDetailsItem && String(currentDetailsItem.id) === loadedItemId) {
+                    renderSimilarArtistsBlock();
+                }
+            };
+        }
+
+        // Check if we already have it in cache
+        if (window.similarArtistsCache && window.similarArtistsCache[itemId]) {
             renderSimilarArtistsBlock();
         } else {
-            // Show a temporary spinner while similarData loads in the background
+            // Show a temporary spinner while data loads
             const existingCards = detailsGrid.querySelectorAll('.card, #similar-observer-sentinel, .loading-spinner');
             existingCards.forEach(c => c.remove());
 
@@ -1133,26 +1150,19 @@
             spinner.textContent = 'Loading similar artists...';
             detailsGrid.appendChild(spinner);
 
-            // Inject similar.js only when needed, if not already loading
-            if (!document.querySelector('script[src="app/similar.js"]')) {
+            // Inject specific chunk for this artist
+            const scriptId = `similar-chunk-${itemId}`;
+            if (!document.getElementById(scriptId)) {
                 const script = document.createElement('script');
-                script.src = 'app/similar.js';
+                script.id = scriptId;
+                script.src = `app/similar/${itemId}.js`;
+                script.onerror = () => {
+                    spinner.textContent = 'No similar artists found.';
+                    // Cache empty array so we don't try again
+                    window.handleSimilarData(itemId, []);
+                };
                 document.body.appendChild(script);
             }
-
-            // Wait until similar.js finishes loading
-            const checkDataInterval = setInterval(() => {
-                let checkLoaded = false;
-                try { if (typeof similarArtistsData !== 'undefined') checkLoaded = true; } catch (e) { }
-
-                if (checkLoaded) {
-                    clearInterval(checkDataInterval);
-                    // Only render if we haven't navigated away from this artist
-                    if (!viewArtist.classList.contains('hidden') && currentDetailsItem && String(currentDetailsItem.id) === itemId) {
-                        renderSimilarArtistsBlock();
-                    }
-                }
-            }, 100);
         }
 
         window.scrollTo({ top: 0, behavior: 'instant' });
