@@ -13,7 +13,6 @@
     const sortByDateBtn = document.getElementById('sort-by-date');
     const scrollToTopBtn = document.getElementById('scroll-to-top');
     const gridSlider = document.getElementById('grid-slider');
-    const gridSliderValue = document.getElementById('grid-slider-value');
     const controlsContainer = document.getElementById('controls-container');
     const swipeLaunchControls = document.querySelector('.swipe-launch-controls');
     const favoritesControlsWrapper = document.getElementById('favorites-controls-wrapper');
@@ -1011,7 +1010,8 @@
         detailsGelbooruLink.href = `https://gelbooru.com/index.php?page=post&s=list&tags=${linkTag}`;
 
         // --- Calculate hero column span based on grid ---
-        const totalCols = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--grid-columns') || '6', 10);
+        const gridComputedStyle = getComputedStyle(detailsGrid);
+        const totalCols = gridComputedStyle.gridTemplateColumns.split(' ').length || 7;
         // Measure actual column width from the grid
         const gridWidth = detailsGrid.clientWidth;
         const gap = 2; // gallery-grid gap is 2px
@@ -1314,17 +1314,11 @@
 
         const key = parseInt(e.key, 10);
 
-        // Если нажата цифра от 1 до 9
-        if (key >= 4 && key <= 9) {
+        // If pressed 1-5
+        if (key >= 1 && key <= 5) {
             gridSlider.value = key;
             updateGridColumns(key);
             triggerGridSave(key);
-        }
-        // Если нажат 0, ставим 10 колонок
-        else if (key === 0) {
-            gridSlider.value = 10;
-            updateGridColumns(10);
-            triggerGridSave(10);
         }
     }
 
@@ -1338,8 +1332,10 @@
 
     // Обработка изменения ползунка
     function updateGridColumns(value) {
-        document.documentElement.style.setProperty('--grid-columns', value);
-        gridSliderValue.textContent = value;
+        // Value 1-5: 1 gives largest density (+2 col offset), 5 gives smallest density (-2 col offset)
+        // Offset = 3 - value
+        const offset = 3 - value;
+        document.documentElement.style.setProperty('--grid-offset', offset);
     }
 
     function triggerGridSave(value) {
@@ -1361,17 +1357,15 @@
 
     // --- Инициализация ---
 
-    // Загружаем и применяем сохраненное количество колонок только на десктопе
-    if (window.innerWidth > 992) {
-        let savedColumnCount = parseInt(localStorage.getItem(GRID_COLUMN_KEY) || '5', 10);
-        // Проверяем, что сохраненное значение находится в новом допустимом диапазоне (4-10)
-        if (savedColumnCount < 4) {
-            savedColumnCount = 4;
-            localStorage.setItem(GRID_COLUMN_KEY, savedColumnCount);
-        }
-        gridSlider.value = savedColumnCount;
-        updateGridColumns(savedColumnCount);
+    // Load and apply saved card size
+    let savedSize = parseInt(localStorage.getItem(GRID_COLUMN_KEY) || '3', 10);
+    // Ensure 1-5 range
+    if (savedSize < 1 || savedSize > 5) {
+        savedSize = 3;
+        localStorage.setItem(GRID_COLUMN_KEY, savedSize);
     }
+    gridSlider.value = savedSize;
+    updateGridColumns(savedSize);
 
     // Загружаем и применяем сохраненные параметры сортировки
     const savedSortType = localStorage.getItem(SORT_TYPE_KEY);

@@ -15,8 +15,43 @@
     --radius: 0px;
     /* Sharp corners like raw brutalism, or use 4px for tiny softening */
     --radius-pill: 9999px;
-
     --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+
+    /* Responsive Grid Defaults */
+    --base-cols: 7;
+    --grid-offset: 0;
+    --grid-columns: calc(var(--base-cols) + var(--grid-offset));
+}
+
+/* Responsive Grid Base Columns */
+@media (max-width: 1600px) {
+    :root {
+        --base-cols: 6;
+    }
+}
+
+@media (max-width: 1200px) {
+    :root {
+        --base-cols: 5;
+    }
+}
+
+@media (max-width: 992px) {
+    :root {
+        --base-cols: 4;
+    }
+}
+
+@media (max-width: 768px) {
+    :root {
+        --base-cols: 3;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --base-cols: 2;
+    }
 }
 
 * {
@@ -343,7 +378,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(var(--grid-columns, 6), 1fr);
+    grid-template-columns: repeat(var(--grid-columns), 1fr);
     grid-auto-rows: min-content;
     /* Ensure rows don't stretch */
     gap: 2px;
