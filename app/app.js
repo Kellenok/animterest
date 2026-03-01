@@ -1098,6 +1098,7 @@
             const existingCards = detailsGrid.querySelectorAll('.card, #similar-observer-sentinel, .loading-spinner');
             existingCards.forEach(c => c.remove());
 
+            isSimilarItemsLoading = false; // Reset loading state for new artist
             loadMoreSimilarArtists(24); // Initial batch
 
             // Mark the first N cards as side-cards for special styling (only on desktop)
@@ -1116,26 +1117,34 @@
             setupSimilarArtistsObserver();
         }
 
-        // Define JSONP callback globally if not already defined
-        if (!window.handleSimilarData) {
-            window.handleSimilarData = function (loadedItemId, similarIds) {
-                // Cache the result
-                if (!window.similarArtistsCache) {
-                    window.similarArtistsCache = {};
-                }
-                window.similarArtistsCache[loadedItemId] = similarIds;
+        // Define JSONP callback globally, re-assigning each time to capture the correct closure
+        window.handleSimilarData = function (loadedItemId, similarIds) {
+            // Cache the result
+            if (!window.similarArtistsCache) {
+                window.similarArtistsCache = {};
+            }
+            window.similarArtistsCache[loadedItemId] = similarIds;
 
-                // Only render if we haven't navigated away from this artist
-                if (!viewArtist.classList.contains('hidden') && currentDetailsItem && String(currentDetailsItem.id) === loadedItemId) {
-                    renderSimilarArtistsBlock();
-                }
-            };
-        }
+            // Remove the script tag to keep DOM clean
+            const oldScript = document.getElementById(`similar-chunk-${loadedItemId}`);
+            if (oldScript) {
+                oldScript.remove();
+            }
+
+            // Only render if we haven't navigated away from this artist
+            if (!viewArtist.classList.contains('hidden') && currentDetailsItem && String(currentDetailsItem.id) === loadedItemId) {
+                renderSimilarArtistsBlock();
+            }
+        };
 
         // Check if we already have it in cache
         if (window.similarArtistsCache && window.similarArtistsCache[itemId]) {
             renderSimilarArtistsBlock();
         } else {
+            // Prevent infinite scroll from continuing to load PREVIOUS artist's cards 
+            // while we wait for the JSONP script down below to return
+            availableSimilarItems = [];
+
             // Show a temporary spinner while data loads
             const existingCards = detailsGrid.querySelectorAll('.card, #similar-observer-sentinel, .loading-spinner');
             existingCards.forEach(c => c.remove());
