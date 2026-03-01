@@ -1,0 +1,23 @@
+{
+  "name": "anima-style-explorer",
+  "version": "1.0.0",
+  "description": "An interactive, high-performance visual database designed to explore artist styles within the **Anima 2B parameter model**.",
+  "main": "playwright_perf_test.spec.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kellenok/animterest.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kellenok/animterest/issues"
+  },
+  "homepage": "https://github.com/Kellenok/animterest#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

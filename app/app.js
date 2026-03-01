@@ -418,56 +418,104 @@
             return;
         }
 
-        loadMoreItems();
+        // Initialize Virtual Scroll
+        virtualState = { startIndex: -1, endIndex: -1 };
+        updateVirtualScroll();
+
+        // Hide loader after initial render
+        if (loader) {
+            loader.style.display = 'none';
+        }
+
+        // --- Логика "Продолжить просмотр" ---
+        const targetJumpId = localStorage.getItem('jumpToArtistId');
+        if (targetJumpId) {
+            // Find target element and scroll to it using grid math
+            const targetIndex = currentItems.findIndex(item => item.id === targetJumpId);
+            if (targetIndex !== -1) {
+                setTimeout(() => {
+                    const gridComputed = window.getComputedStyle(galleryContainer);
+                    const columns = gridComputed.getPropertyValue('grid-template-columns').split(' ').length || 1;
+                    const containerWidth = galleryContainer.clientWidth - (columns - 1) * 2;
+                    const cardWidth = containerWidth / columns;
+                    const cardHeight = (cardWidth * (1216 / 832)) + 40;
+                    const targetRow = Math.floor(targetIndex / columns);
+                    window.scrollTo(0, targetRow * cardHeight);
+                }, 50);
+            }
+            localStorage.removeItem('jumpToArtistId');
+        }
     }
 
-    function loadMoreItems() {
-        if (isLoading) return;
-        isLoading = true;
-        loader.style.display = 'block';
+    let virtualState = { startIndex: -1, endIndex: -1 };
 
-        // Имитация задержки сети для демонстрации загрузчика
-        setTimeout(() => {
-            const start = currentPage * itemsPerPage;
-            const end = start + itemsPerPage;
-            const itemsToLoad = currentItems.slice(start, end);
+    // Use requestAnimationFrame for smooth scrolling updates
+    let isVirtualScrollPending = false;
 
-            itemsToLoad.forEach(item => {
-                const card = createCard(item);
+    function updateVirtualScroll() {
+        if (!currentItems || currentItems.length === 0 || currentView !== 'gallery' && currentView !== 'favorites') return;
+
+        const gridComputed = window.getComputedStyle(galleryContainer);
+        const columns = gridComputed.getPropertyValue('grid-template-columns').split(' ').length || 1;
+
+        // Layout calculations
+        const containerWidth = galleryContainer.clientWidth - (columns - 1) * 2;
+        const cardWidth = containerWidth / columns;
+        const cardHeight = (cardWidth * (1216 / 832)) + 40; // Approximate card height based on aspect ratio
+
+        const scrollTop = window.scrollY;
+
+        // Visible window rows (viewport size)
+        const rowsInView = Math.ceil(window.innerHeight / cardHeight);
+        const startRow = Math.max(0, Math.floor((scrollTop - galleryContainer.offsetTop) / cardHeight) - 2);
+        const endRow = startRow + rowsInView + 4; // Add 4 rows buffer below
+
+        const startIndex = startRow * columns;
+        let endIndex = endRow * columns;
+        endIndex = Math.min(currentItems.length, endIndex);
+
+        // Skip DOM update if window hasn't changed enough
+        if (virtualState.startIndex === startIndex && virtualState.endIndex === endIndex) {
+            return;
+        }
+
+        virtualState.startIndex = startIndex;
+        virtualState.endIndex = endIndex;
+
+        const totalRows = Math.ceil(currentItems.length / columns);
+        const totalHeight = totalRows * cardHeight;
+
+        const topPadding = startRow * cardHeight;
+        const renderedRows = Math.ceil((endIndex - startIndex) / columns);
+        // Correct bottom padding
+        const bottomPadding = Math.max(0, totalHeight - topPadding - (renderedRows * cardHeight));
+
+        // Render step
+        galleryContainer.innerHTML = '';
+
+        if (topPadding > 0) {
+            const topSpacer = document.createElement('div');
+            topSpacer.style.gridColumn = '1 / -1';
+            topSpacer.style.height = `${topPadding}px`;
+            galleryContainer.appendChild(topSpacer);
+        }
+
+        for (let i = startIndex; i < endIndex; i++) {
+            if (currentItems[i]) {
+                const card = createCard(currentItems[i]);
                 galleryContainer.appendChild(card);
-            });
-
-            currentPage++;
-            isLoading = false;
-            loader.style.display = 'none';
-
-            // Если больше нечего загружать, скрываем лоадер навсегда для этой сессии
-            if (currentPage * itemsPerPage >= currentItems.length) {
-                loader.style.display = 'none';
-            } else {
-                // Проверяем, нужно ли загрузить еще, если контент не заполняет экран
-                checkAndLoadMoreIfContentDoesNotFillScreen();
             }
+        }
 
-            // --- Логика "Продолжить просмотр" ---
-            // Очищаем флаг после того, как смещение было использовано в renderView
-            const jumpToArtistId = localStorage.getItem('jumpToArtistId');
-            if (jumpToArtistId) {
-                localStorage.removeItem('jumpToArtistId');
-            }
-
-        }, 500);
+        if (bottomPadding > 0) {
+            const bottomSpacer = document.createElement('div');
+            bottomSpacer.style.gridColumn = '1 / -1';
+            bottomSpacer.style.height = `${bottomPadding}px`;
+            galleryContainer.appendChild(bottomSpacer);
+        }
     }
 
     // --- Функции-помощники ---
-
-    function checkAndLoadMoreIfContentDoesNotFillScreen() {
-        const hasScrollbar = document.body.scrollHeight > window.innerHeight;
-        const hasMoreItems = currentPage * itemsPerPage < currentItems.length;
-        if (!isLoading && !hasScrollbar && hasMoreItems) {
-            loadMoreItems();
-        }
-    }
 
     function toggleFavorite(item, button) {
         const transaction = db.transaction(STORE_NAME, 'readwrite');
@@ -576,24 +624,32 @@
         searchInput.parentElement.classList.toggle('disabled', isJumpingByCount);
     }
 
-    // --- Обработчики событий ---
-
-    // Появление/скрытие кнопки "Наверх"
+    // Появление/скрытие кнопки "Наверх" и Virtual Scroll
     window.addEventListener('scroll', () => {
-        // Появление/скрытие кнопки "Наверх"
         if (window.scrollY > 300) {
             scrollToTopBtn.classList.add('visible');
         } else {
             scrollToTopBtn.classList.remove('visible');
         }
 
-        // Проверяем, достигли ли мы конца страницы
-        if (!isLoading && (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 200) {
-            if (currentPage * itemsPerPage < currentItems.length) {
-                loadMoreItems();
-            }
+        if (!isVirtualScrollPending) {
+            isVirtualScrollPending = true;
+            window.requestAnimationFrame(() => {
+                if (currentView === 'gallery' || currentView === 'favorites') {
+                    updateVirtualScroll();
+                }
+                isVirtualScrollPending = false;
+            });
         }
     });
+
+    // Handle resize to recalibrate virtual scroll grid sizes
+    window.addEventListener('resize', debounce(() => {
+        if (currentView === 'gallery' || currentView === 'favorites') {
+            virtualState = { startIndex: -1, endIndex: -1 }; // force render
+            updateVirtualScroll();
+        }
+    }, 200));
 
     // Клик по кнопке "Наверх"
     scrollToTopBtn.addEventListener('click', () => {
@@ -780,6 +836,23 @@
         URL.revokeObjectURL(url);
     });
 
+    // --- Утилиты ---
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    const debouncedRenderView = debounce(() => {
+        renderView();
+    }, 250);
+
     // Обработка ввода в строке поиска
     searchInput.addEventListener('input', (e) => {
         const newSearchTerm = e.target.value.toLowerCase().trim();
@@ -793,7 +866,7 @@
 
         searchTerm = newSearchTerm;
         updateControlsState(); // Обновляем состояние контролов
-        renderView();
+        debouncedRenderView(); // Используем debounce для тяжелой функции рендеринга
     });
 
     clearSearchBtn.addEventListener('click', () => {
