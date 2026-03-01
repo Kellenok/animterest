@@ -394,6 +394,11 @@ input[type="range"]::-webkit-slider-thumb {
     cursor: zoom-in;
 }
 
+.card__visual {
+    position: relative;
+    width: 100%;
+}
+
 .card__image {
     width: 100%;
     height: auto;
@@ -483,7 +488,8 @@ input[type="range"]::-webkit-slider-thumb {
     opacity: 0;
 }
 
-.card:hover .favorite-button {
+.card:hover .favorite-button,
+.card:hover .info-button {
     opacity: 1;
 }
 
@@ -501,22 +507,22 @@ input[type="range"]::-webkit-slider-thumb {
 
 .favorite-button.remove-favorite {
     opacity: 1;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 300;
     line-height: 1;
     color: var(--text);
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.4);
     background-image: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: none;
 }
 
 .info-button {
     position: absolute;
-    top: 12px;
-    left: 12px;
+    bottom: 12px;
+    right: 12px;
     width: 42px;
     height: 42px;
     background-color: rgba(0, 0, 0, 0.3);
@@ -880,6 +886,7 @@ input[type="range"]::-webkit-slider-thumb {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px;
+    margin-bottom: 16px;
 }
 
 .detail-action-btn {
@@ -934,9 +941,8 @@ input[type="range"]::-webkit-slider-thumb {
     align-self: end;
 }
 
-
-.side-card.card .card__info {
-    padding-bottom: 0;
+.details-hero .details-image {
+    padding-bottom: 16px;
 }
 
 @media (max-width: 600px) {

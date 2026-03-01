@@ -182,7 +182,7 @@
             console.table(notFoundArtists);
         }
     }
-    function createCard(item) {
+    function createCard(item, forceGalleryAppearance = false) {
         const card = document.createElement('div');
         card.className = 'card';
         card.dataset.artist = item.artist;
@@ -196,7 +196,7 @@
             : '';
 
         let favButtonHTML;
-        if (currentView === 'favorites') {
+        if (currentView === 'favorites' && !forceGalleryAppearance) {
             // В "Избранном" всегда показываем кнопку удаления (крестик)
             favButtonHTML = `
                 <button 
@@ -221,16 +221,18 @@
         }
 
         card.innerHTML = `
-            <img class="card__image" src="${item.image}" alt="${item.artist}" loading="lazy" width="832" height="1216">
+            <div class="card__visual">
+                <img class="card__image" src="${item.image}" alt="${item.artist}" loading="lazy" width="832" height="1216">
+                <div class="works-count" title="Approximate number of training images for this artistic style">
+                    ${item.worksCount.toLocaleString('en-US')}
+                </div>
+                ${rankHTML}
+                ${favButtonHTML}
+                <button class="info-button" aria-label="View artist details" title="View details">i</button>
+            </div>
             <div class="card__info">
                 <p class="card__artist">${item.artist}</p>
             </div>
-            <div class="works-count" title="Approximate number of training images for this artistic style">
-                ${item.worksCount.toLocaleString('en-US')}
-            </div>
-            ${rankHTML}
-            ${favButtonHTML}
-            <button class="info-button" aria-label="View artist details" title="View details">i</button>
         `;
 
         // Копирование имени по клику на карточку (кроме кнопки "избранное" и "инфо")
@@ -1009,49 +1011,65 @@
         detailsDanbooruLink.href = `https://danbooru.donmai.us/posts?tags=${linkTag}`;
         detailsGelbooruLink.href = `https://gelbooru.com/index.php?page=post&s=list&tags=${linkTag}`;
 
-        // --- Calculate hero column span based on grid ---
-        const gridComputedStyle = getComputedStyle(detailsGrid);
-        const totalCols = gridComputedStyle.gridTemplateColumns.split(' ').length || 7;
-        // Measure actual column width from the grid
-        const gridWidth = detailsGrid.clientWidth;
-        const gap = 2; // gallery-grid gap is 2px
-        const colWidth = (gridWidth - (totalCols - 1) * gap) / totalCols;
-
-        // Find N columns where N*colWidth is between 300-500px
-        let heroCols = 2;
-        for (let n = 1; n <= totalCols; n++) {
-            const w = n * colWidth + (n - 1) * gap;
-            if (w >= 300 && w <= 500) {
-                heroCols = n;
-                break;
-            }
-            if (w > 500) {
-                heroCols = Math.max(1, n - 1);
-                break;
-            }
-        }
-        // Ensure at least 300px: if 1 col < 300, pick more
-        const heroPixelWidth = heroCols * colWidth + (heroCols - 1) * gap;
-        if (heroPixelWidth < 300 && heroCols < totalCols) {
-            heroCols = Math.min(totalCols, heroCols + 1);
-        }
-
-        // Row span: hero is image-only now (info is separate grid item)
-        const cardVisualHeight = colWidth * (1216 / 832) + 30;
-        const heroImageHeight = heroPixelWidth * (1216 / 832);
-        const heroRows = Math.max(2, Math.ceil(heroImageHeight / (cardVisualHeight + gap)));
-
-        // Apply CSS vars to the grid
-        const infoCols = Math.min(3, Math.max(1, totalCols - heroCols));
-        detailsGrid.style.setProperty('--detail-hero-cols', heroCols);
-        detailsGrid.style.setProperty('--detail-hero-rows', heroRows);
-        detailsGrid.style.setProperty('--detail-info-cols', infoCols);
-
-        // Explicitly position info panel: right next to hero, spanning to end of row
-        // Info panel spans rows 1 to (heroRows-1), so cards only appear at the bottom
+        // --- Layout logic: Desktop vs Mobile ---
+        const isMobile = window.innerWidth <= 600;
         const infoPanel = detailsGrid.querySelector('.details-info-panel');
-        infoPanel.style.gridColumn = `${heroCols + 1} / -1`;
-        infoPanel.style.gridRow = `1 / ${heroRows}`;
+
+        if (isMobile) {
+            // Reset all custom grid styling for mobile stack
+            detailsGrid.style.gridTemplateColumns = '';
+            detailsGrid.style.display = 'flex';
+            detailsGrid.style.flexDirection = 'column';
+
+            detailsHero.style.gridColumn = '';
+            detailsHero.style.gridRow = '';
+            detailsHero.style.paddingRight = '0';
+
+            infoPanel.style.gridColumn = '';
+            infoPanel.style.gridRow = '';
+            infoPanel.style.maxWidth = 'none';
+            infoPanel.style.padding = '16px 0';
+        } else {
+            // Desktop: Restore grid and calculate spans
+            detailsGrid.style.display = 'grid';
+            detailsGrid.style.flexDirection = '';
+            // (Total columns logic remains)
+            const gridComputedStyle = getComputedStyle(detailsGrid);
+            const totalCols = gridComputedStyle.gridTemplateColumns.split(' ').length || 7;
+            const gridWidth = detailsGrid.clientWidth;
+            const gap = 2; // gallery-grid gap is 2px
+            const colWidth = (gridWidth - (totalCols - 1) * gap) / totalCols;
+
+            // Find N columns for hero
+            let heroCols = 2;
+            for (let n = 1; n <= totalCols; n++) {
+                const w = n * colWidth + (n - 1) * gap;
+                if (w >= 300 && w <= 500) {
+                    heroCols = n;
+                    break;
+                }
+                if (w > 500) {
+                    heroCols = Math.max(1, n - 1);
+                    break;
+                }
+            }
+            if ((heroCols * colWidth + (heroCols - 1) * gap) < 300 && heroCols < totalCols) {
+                heroCols = Math.min(totalCols, heroCols + 1);
+            }
+
+            const cardVisualHeight = colWidth * (1216 / 832) + 30;
+            const heroImageHeight = (heroCols * colWidth + (heroCols - 1) * gap) * (1216 / 832);
+            const heroRows = Math.max(2, Math.ceil(heroImageHeight / (cardVisualHeight + gap)));
+
+            detailsGrid.style.setProperty('--detail-hero-cols', heroCols);
+            detailsGrid.style.setProperty('--detail-hero-rows', heroRows);
+            detailsGrid.style.setProperty('--detail-info-cols', Math.min(3, Math.max(1, totalCols - heroCols)));
+
+            detailsHero.style.paddingRight = '16px';
+            infoPanel.style.gridColumn = `${heroCols + 1} / -1`;
+            infoPanel.style.gridRow = `1 / ${heroRows}`;
+            infoPanel.style.maxWidth = '360px';
+        }
 
         // Disconnect previous observer
         if (similarArtistsObserver) {
@@ -1060,36 +1078,80 @@
 
         // Setup Similar Artists — use embedding similarity if available
         const itemId = String(item.id);
-        console.log('[DEBUG] similarData exists:', !!similarData, '| itemId:', itemId, '| found:', similarData ? !!similarData[itemId] : 'N/A', '| keys sample:', similarData ? Object.keys(similarData).slice(0, 3) : 'N/A');
-        if (similarData && similarData[itemId]) {
-            // Build ordered list from similarity data
-            const similarIds = similarData[itemId];
-            const idToItem = new Map(allItems.map(i => [String(i.id), i]));
-            availableSimilarItems = similarIds
-                .map(id => idToItem.get(String(id)))
-                .filter(i => i != null);
-            // No random fallback — strictly style-based matches
+
+        function renderSimilarArtistsBlock() {
+            let hasData = false;
+            try { if (typeof similarArtistsData !== 'undefined') hasData = true; } catch (e) { }
+
+            console.log('[DEBUG] similarData exists:', hasData, '| itemId:', itemId);
+            if (hasData && similarArtistsData[itemId]) {
+                // Build ordered list from similarity data
+                const similarIds = similarArtistsData[itemId];
+                const idToItem = new Map(allItems.map(i => [String(i.id), i]));
+                availableSimilarItems = similarIds
+                    .map(id => idToItem.get(String(id)))
+                    .filter(i => i != null);
+                // No random fallback — strictly style-based matches
+            } else {
+                availableSimilarItems = [];
+            }
+
+            // Clear old cards / spinner from the grid (keep the hero)
+            const existingCards = detailsGrid.querySelectorAll('.card, #similar-observer-sentinel, .loading-spinner');
+            existingCards.forEach(c => c.remove());
+
+            loadMoreSimilarArtists(24); // Initial batch
+
+            // Mark the first N cards as side-cards for special styling (only on desktop)
+            if (window.innerWidth > 600) {
+                const gridComputedStyle = getComputedStyle(detailsGrid);
+                const totalCols = gridComputedStyle.gridTemplateColumns.split(' ').length || 7;
+                const heroCols = parseInt(detailsGrid.style.getPropertyValue('--detail-hero-cols') || '2', 10);
+                const sideCardCount = totalCols - heroCols;
+
+                const allCards = detailsGrid.querySelectorAll('.card');
+                for (let i = 0; i < Math.min(sideCardCount, allCards.length); i++) {
+                    allCards[i].classList.add('side-card');
+                }
+            }
+
+            setupSimilarArtistsObserver();
+        }
+
+        let isDataLoaded = false;
+        try { if (typeof similarArtistsData !== 'undefined') isDataLoaded = true; } catch (e) { }
+
+        if (isDataLoaded) {
+            renderSimilarArtistsBlock();
         } else {
-            // No similarity data for this artist — keep list empty or fallback to empty
-            availableSimilarItems = [];
+            // Show a temporary spinner while similarData loads in the background
+            const existingCards = detailsGrid.querySelectorAll('.card, #similar-observer-sentinel, .loading-spinner');
+            existingCards.forEach(c => c.remove());
+
+            const spinner = document.createElement('div');
+            spinner.className = 'loading-spinner';
+            spinner.style.gridColumn = '1 / -1';
+            spinner.style.padding = '40px';
+            spinner.style.textAlign = 'center';
+            spinner.style.fontSize = '1.2rem';
+            spinner.style.color = 'var(--text-secondary)';
+            spinner.textContent = 'Loading similar artists...';
+            detailsGrid.appendChild(spinner);
+
+            // Wait until similar.js finishes loading
+            const checkDataInterval = setInterval(() => {
+                let checkLoaded = false;
+                try { if (typeof similarArtistsData !== 'undefined') checkLoaded = true; } catch (e) { }
+
+                if (checkLoaded) {
+                    clearInterval(checkDataInterval);
+                    // Only render if we haven't navigated away from this artist
+                    if (!viewArtist.classList.contains('hidden') && currentDetailsItem && String(currentDetailsItem.id) === itemId) {
+                        renderSimilarArtistsBlock();
+                    }
+                }
+            }, 100);
         }
-
-        // Clear old cards from the grid (keep the hero)
-        const existingCards = detailsGrid.querySelectorAll('.card, #similar-observer-sentinel');
-        existingCards.forEach(c => c.remove());
-
-        // Calculate how many cards fit in the side area (next to hero, last row)
-        const sideCardCount = totalCols - heroCols;
-
-        loadMoreSimilarArtists(24); // Initial batch
-
-        // Mark the first N cards as side-cards for special styling
-        const allCards = detailsGrid.querySelectorAll('.card');
-        for (let i = 0; i < Math.min(sideCardCount, allCards.length); i++) {
-            allCards[i].classList.add('side-card');
-        }
-
-        setupSimilarArtistsObserver();
 
         window.scrollTo({ top: 0, behavior: 'instant' });
     }
@@ -1136,7 +1198,7 @@
         if (oldSentinel) oldSentinel.remove();
 
         itemsToAdd.forEach(item => {
-            const card = createCard(item);
+            const card = createCard(item, true); // Force gallery appearance for similarity grid
             detailsGrid.appendChild(card);
         });
 
@@ -1222,7 +1284,6 @@
         }
     });
 
-
     // --- Управление сортировкой ---
     function updateSortButtonsUI() {
         // Сброс состояния для обеих кнопок
@@ -1259,7 +1320,7 @@
     function handleSortClick(clickedType) {
         // Если активируем "Uniqueness", сбрасываем все остальные фильтры
         if (clickedType === 'uniqueness' && sortType !== 'uniqueness') {
-            resetJumpState(false); // Сбрасываем "Jump"
+            setJumpState(false); // Сбрасываем "Jump"
 
             // Прямой сброс поиска вместо имитации клика для надежности
             if (searchInput.value !== '') {
@@ -1279,6 +1340,7 @@
             // Для 'name' - asc, для остальных - desc.
             sortDirection = sortType === 'name' ? 'asc' : 'desc';
         }
+
         updateSortButtonsUI();
 
         // Отложенное сохранение в localStorage
@@ -1324,16 +1386,13 @@
 
     document.addEventListener('keydown', handleGridHotkeys);
 
-
-
-
     let gridUpdateTimeout;
     const GRID_COLUMN_KEY = 'gridColumnCount';
 
     // Обработка изменения ползунка
     function updateGridColumns(value) {
         // Value 1-5: 1 gives largest density (+2 col offset), 5 gives smallest density (-2 col offset)
-        // Offset = 3 - value
+        // offset = 3 - value
         const offset = 3 - value;
         document.documentElement.style.setProperty('--grid-offset', offset);
     }
@@ -1378,17 +1437,23 @@
     // Устанавливаем начальное состояние сортировки
     updateSortButtonsUI();
 
-
     initDB()
         .then(() => {
             loadInitialData().then(() => {
                 // Initial route parsing
                 handleHashChange();
+
+                // Lazy-load similar.js in the background without blocking initial render
+                setTimeout(() => {
+                    const script = document.createElement('script');
+                    script.src = 'app/similar.js';
+                    script.defer = true;
+                    document.body.appendChild(script);
+                }, 100);
             });
         })
         .catch(err => {
             console.error(err);
             galleryContainer.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">Failed to initialize database.</p>';
         });
-
 });
