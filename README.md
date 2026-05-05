@@ -6,6 +6,9 @@ An interactive, high-performance visual database designed to explore artist styl
   <img src="images/Anima 2B Style Explorer.png" alt="Anima 2B Style Explorer Banner" width="800">
 </p>
 <p align="center">
+  <img src="images/Anima 2B Style Explorer - Favorites Tab.png" alt="Anima 2B Style Explorer - Favorites Tab" width="800">
+</p>
+<p align="center">
   <img src="images/swipe-mode.png" alt="Anima 2B Style Explorer Swipe Mode" width="800">
 </p>
 
@@ -24,6 +27,8 @@ Instead of guessing, you can now visually verify every style before you hit "Gen
  Organize artists alphabetically (`A-Z`), by the number of training images (`Works`), or by their stylistic **Uniqueness** to find hidden gems.
 *   **Favorites Management:**
  Save your favorite artists with a single click. Your collection is stored locally in your browser via IndexedDB.
+*   **Folder Organization:**
+ Group your favorite artists into custom folders with drag-and-drop. Select and move multiple artists at once (`Ctrl+Click`), filter your view, and export folder-specific lists.
 *   **Import & Export:** 
 Easily back up your favorites to a `.json` file or export a simple `.txt` list of artist names for your notes.
 *   **Customizable Layout:**
