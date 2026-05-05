@@ -1,4 +1,4 @@
-﻿﻿document.addEventListener('DOMContentLoaded', () => {
+﻿document.addEventListener('DOMContentLoaded', () => {
     const DEBUG_MODE = false;
 
     const galleryContainer = document.getElementById('gallery-container');
@@ -91,7 +91,7 @@
     // Initialize IndexedDB for local storage
     function initDB() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, 2);
+            const request = indexedDB.open(DB_NAME, 4);
 
             request.onerror = () => {
                 console.error('IndexedDB error:', request.error);
