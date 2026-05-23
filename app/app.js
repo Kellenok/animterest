@@ -1,4 +1,4 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     const DEBUG_MODE = false;
 
     const galleryContainer = document.getElementById('gallery-container');
@@ -81,7 +81,7 @@
 
     const isOnline = window.location.protocol.startsWith('http');
     const imageBasePath = isOnline
-        ? 'https://cdn.statically.io/gh/ThetaCursed/Anima-Style-Explorer/main/'
+        ? 'https://raw.githubusercontent.com/ThetaCursed/Anima-Assets/main/'
         : '';
 
     let db;
