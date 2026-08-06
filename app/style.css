@@ -772,6 +772,41 @@ input[type="range"]::-webkit-slider-thumb {
     border-color: rgba(255, 75, 75, 0.4);
 }
 
+.heart-pop-anim {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 10005;
+    pointer-events: none;
+    animation: heart-pop-fade 0.75s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.heart-pop-anim svg {
+    width: 80px;
+    height: 80px;
+    filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6));
+}
+
+@keyframes heart-pop-fade {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+    40% {
+        transform: translate(-50%, -50%) scale(1.3);
+        opacity: 1;
+    }
+    70% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 0;
+    }
+}
+
 .hotkey-hint {
     opacity: 0.45;
     font-size: 10px;

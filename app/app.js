@@ -167,6 +167,63 @@ document.addEventListener('DOMContentLoaded', () => {
             console.table(notFoundArtists);
         }
     }
+    function triggerHeartPop(container) {
+        if (!container) return;
+        const heart = document.createElement('div');
+        heart.className = 'heart-pop-anim';
+        heart.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="#ff4b4b" stroke="none">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+        `;
+        const style = window.getComputedStyle(container);
+        if (style.position === 'static') {
+            container.style.position = 'relative';
+        }
+        container.appendChild(heart);
+        setTimeout(() => { heart.remove(); }, 750);
+    }
+
+    function attachDoubleLikeHandler(element, getItemCallback) {
+        let lastTap = 0;
+        let tapTimeout = null;
+
+        element.addEventListener('touchend', (e) => {
+            if (e.target.closest('.favorite-button') || e.target.closest('.info-button') || e.target.closest('.detail-action-btn') || e.target.closest('.swipe-close-btn')) {
+                return;
+            }
+
+            const currentTime = Date.now();
+            const tapLength = currentTime - lastTap;
+
+            if (tapLength < 300 && tapLength > 0) {
+                e.preventDefault();
+                clearTimeout(tapTimeout);
+                const item = getItemCallback();
+                if (item) {
+                    toggleFavorite(item);
+                    triggerHeartPop(element);
+                }
+                lastTap = 0;
+            } else {
+                lastTap = currentTime;
+                tapTimeout = setTimeout(() => { lastTap = 0; }, 300);
+            }
+        });
+
+        element.addEventListener('dblclick', (e) => {
+            if (e.target.closest('.favorite-button') || e.target.closest('.info-button') || e.target.closest('.detail-action-btn') || e.target.closest('.swipe-close-btn')) {
+                return;
+            }
+            e.preventDefault();
+            const item = getItemCallback();
+            if (item) {
+                toggleFavorite(item);
+                triggerHeartPop(element);
+            }
+        });
+    }
+
     // Construct a DOM card element containing artist data
     function createCard(item, forceGalleryAppearance = false) {
         const card = document.createElement('div');
@@ -227,6 +284,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
+
+        attachDoubleLikeHandler(card, () => item);
 
         const favButton = card.querySelector('.favorite-button');
         favButton.addEventListener('click', (e) => {
@@ -1119,6 +1178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsWorksCount.textContent = item.worksCount.toLocaleString('en-US');
 
         updateDetailsFavoriteButton(item.id);
+        attachDoubleLikeHandler(detailsHero, () => currentDetailsItem);
 
         let formattedName = item.artist.replace(/\\/g, '').replace(/ /g, '_');
         const linkTag = encodeURIComponent(formattedName);
@@ -1452,6 +1512,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeQuickLook();
             }
         });
+    }
+    const quicklookContent = document.querySelector('.quicklook-content');
+    if (quicklookContent) {
+        attachDoubleLikeHandler(quicklookContent, () => quickLookCurrentItem);
     }
 
     document.addEventListener('keydown', (e) => {
