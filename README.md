@@ -24,12 +24,11 @@ This tool helps you see how the Anima 2B model interprets an artist style before
 
 ## Navigation and Hotkeys
 - **Arrow Keys:** Move the focus across the grid.
-- **Mouse Click:** Open the QuickLook preview.
 - **Double-click / Double-tap:** Add the artist to your favorites.
 - **Middle-click:** Open the QuickLook preview.
 - **Scroll Wheel:** Switch photos in the QuickLook preview.
 - **F:** Add the artist to your favorites.
-- **C:** Copy the artist name to the clipboard.
+- **C / Left-click:** Copy the artist name to the clipboard.
 - **Enter:** Open the Similar Artists panel.
 - **Escape:** Close the active window.
 
