@@ -23,13 +23,19 @@ self.addEventListener('fetch', event => {
                 }
 
                 try {
-                    // Fetch from network (browser automatically follows 302 redirect)
-                    const networkResponse = await fetch(event.request);
+                    // <img> tags make 'no-cors' requests by default, which return opaque responses (status 0, ok: false).
+                    // We must force 'cors' mode so Hugging Face returns a 200 OK that we can cache.
+                    const fetchOptions = {
+                        mode: event.request.mode === 'no-cors' ? 'cors' : event.request.mode,
+                        credentials: 'omit',
+                        headers: event.request.headers
+                    };
                     
-                    // Only cache successful responses (not errors)
-                    // networkResponse.ok is true for 200 OK (the final CloudFront response)
+                    const fetchRequest = new Request(event.request, fetchOptions);
+                    const networkResponse = await fetch(fetchRequest);
+                    
+                    // Only cache successful responses (200 OK)
                     if (networkResponse && networkResponse.ok) {
-                        // Store the final 200 OK response against the original HF url
                         cache.put(event.request, networkResponse.clone());
                     }
                     
