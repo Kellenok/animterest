@@ -1826,21 +1826,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function getFirstVisibleCardIndex() {
         if (!currentItems || !currentItems.length) return 0;
+
+        if (typeof hoveredItem !== 'undefined' && hoveredItem) {
+            const hoveredIdx = currentItems.findIndex(item => String(item.id) === String(hoveredItem.id));
+            if (hoveredIdx !== -1) return hoveredIdx;
+        }
+
         const cards = galleryContainer.querySelectorAll('.card');
+        if (!cards.length) return 0;
+
+        const viewportCenter = window.innerHeight / 2;
+        let bestIdx = -1;
+        let minDistance = Infinity;
+
         for (let i = 0; i < cards.length; i++) {
             const rect = cards[i].getBoundingClientRect();
-            if (rect.top >= 90 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)) {
-                const id = cards[i].dataset.id;
-                const idx = currentItems.findIndex(item => String(item.id) === id);
-                if (idx !== -1) return idx;
+            if (rect.bottom > 90 && rect.top < window.innerHeight) {
+                const cardCenter = rect.top + (rect.height / 2);
+                const distance = Math.abs(cardCenter - viewportCenter);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    const id = cards[i].dataset.id;
+                    const idx = currentItems.findIndex(item => String(item.id) === id);
+                    if (idx !== -1) bestIdx = idx;
+                }
             }
         }
-        if (cards.length > 0) {
-            const id = cards[0].dataset.id;
-            const idx = currentItems.findIndex(item => String(item.id) === id);
-            if (idx !== -1) return idx;
-        }
-        return 0;
+
+        return bestIdx !== -1 ? bestIdx : 0;
     }
 
     let detailsFocusedIndex = -1;
@@ -1852,13 +1865,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getFirstVisibleDetailsCardIndex(cards) {
+        if (!cards || !cards.length) return 0;
+
+        const viewportCenter = window.innerHeight / 2;
+        let bestIdx = 0;
+        let minDistance = Infinity;
+
         for (let i = 0; i < cards.length; i++) {
             const rect = cards[i].getBoundingClientRect();
-            if (rect.top >= 0 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)) {
-                return i;
+            if (rect.bottom > 0 && rect.top < window.innerHeight) {
+                const cardCenter = rect.top + (rect.height / 2);
+                const distance = Math.abs(cardCenter - viewportCenter);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestIdx = i;
+                }
             }
         }
-        return 0;
+
+        return bestIdx;
     }
 
     function ensureDetailsCardVisible(card) {
@@ -1873,6 +1898,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function disableHoverUntilMouseMoved() {
+        document.body.classList.add('disable-hover');
+    }
+
+    window.addEventListener('scroll', disableHoverUntilMouseMoved, { passive: true });
+
     let lastMouseX = -1;
     let lastMouseY = -1;
     document.addEventListener('mousemove', (e) => {
@@ -1880,6 +1911,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.clientX === lastMouseX && e.clientY === lastMouseY) return;
         lastMouseX = e.clientX;
         lastMouseY = e.clientY;
+
+        document.body.classList.remove('disable-hover');
 
         if (keyboardFocusedIndex !== -1) {
             const cards = galleryContainer.querySelectorAll('.card');
@@ -1942,22 +1975,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
             e.preventDefault();
+            disableHoverUntilMouseMoved();
 
             if (isArtistView) {
                 const cards = Array.from(detailsGrid.querySelectorAll('.card'));
                 if (!cards.length) return;
 
-                if (detailsFocusedIndex === -1 || !cards[detailsFocusedIndex]) {
-                    detailsFocusedIndex = getFirstVisibleDetailsCardIndex(cards);
-                } else {
+                if (detailsFocusedIndex !== -1 && cards[detailsFocusedIndex]) {
                     cards[detailsFocusedIndex].classList.remove('keyboard-focus');
-                    let cols = getDetailsGridColumnCount();
-
-                    if (e.code === 'ArrowRight') detailsFocusedIndex++;
-                    else if (e.code === 'ArrowLeft') detailsFocusedIndex--;
-                    else if (e.code === 'ArrowDown') detailsFocusedIndex += cols;
-                    else if (e.code === 'ArrowUp') detailsFocusedIndex -= cols;
+                } else {
+                    detailsFocusedIndex = getFirstVisibleDetailsCardIndex(cards);
                 }
+
+                let cols = getDetailsGridColumnCount();
+                if (e.code === 'ArrowRight') detailsFocusedIndex++;
+                else if (e.code === 'ArrowLeft') detailsFocusedIndex--;
+                else if (e.code === 'ArrowDown') detailsFocusedIndex += cols;
+                else if (e.code === 'ArrowUp') detailsFocusedIndex -= cols;
 
                 if (detailsFocusedIndex < 0) detailsFocusedIndex = 0;
                 if (detailsFocusedIndex >= cards.length) {
@@ -1982,13 +2016,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (keyboardFocusedIndex === -1 || keyboardFocusedIndex >= currentItems.length) {
                     keyboardFocusedIndex = getFirstVisibleCardIndex();
-                } else {
-                    let cols = getGridColumnCount();
-                    if (e.code === 'ArrowRight') keyboardFocusedIndex++;
-                    else if (e.code === 'ArrowLeft') keyboardFocusedIndex--;
-                    else if (e.code === 'ArrowDown') keyboardFocusedIndex += cols;
-                    else if (e.code === 'ArrowUp') keyboardFocusedIndex -= cols;
                 }
+
+                let cols = getGridColumnCount();
+                if (e.code === 'ArrowRight') keyboardFocusedIndex++;
+                else if (e.code === 'ArrowLeft') keyboardFocusedIndex--;
+                else if (e.code === 'ArrowDown') keyboardFocusedIndex += cols;
+                else if (e.code === 'ArrowUp') keyboardFocusedIndex -= cols;
 
                 if (keyboardFocusedIndex < 0) keyboardFocusedIndex = 0;
                 if (keyboardFocusedIndex >= currentItems.length) {
