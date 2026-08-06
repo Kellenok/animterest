@@ -1445,6 +1445,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    let lastWheelTime = 0;
+    let quickLookOpenTime = 0;
+
+    function navigateQuickLook(direction) {
+        if (!isQuickLookOpen || !quickLookCurrentItem) return;
+
+        const isArtistView = window.location.hash.startsWith('#/artist/');
+        let list = [];
+
+        if (isArtistView) {
+            const cards = detailsGrid.querySelectorAll('.card');
+            cards.forEach(card => {
+                const id = card.dataset.id;
+                const found = allItems.find(item => String(item.id) === id);
+                if (found) list.push(found);
+            });
+        } else {
+            list = currentItems || [];
+        }
+
+        if (list.length === 0) return;
+
+        const currentIndex = list.findIndex(item => String(item.id) === String(quickLookCurrentItem.id));
+        if (currentIndex === -1) return;
+
+        let nextIndex = currentIndex + direction;
+        if (nextIndex < 0) nextIndex = list.length - 1;
+        if (nextIndex >= list.length) nextIndex = 0;
+
+        const nextItem = list[nextIndex];
+        if (nextItem) {
+            updateQuickLookItem(nextItem);
+
+            if (!isArtistView) {
+                keyboardFocusedIndex = nextIndex;
+                const activeId = String(nextItem.id);
+                const activeCard = galleryContainer.querySelector(`.card[data-id="${activeId}"]`);
+                if (activeCard) {
+                    activeCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            } else {
+                detailsFocusedIndex = nextIndex;
+            }
+        }
+    }
+
     function openQuickLook(item) {
         if (!item) return;
         quickLookCurrentItem = item;
@@ -1458,6 +1504,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateQuickLookFavUI();
             modal.classList.add('visible');
             isQuickLookOpen = true;
+            quickLookOpenTime = Date.now();
         }
     }
 
@@ -1481,6 +1528,50 @@ document.addEventListener('DOMContentLoaded', () => {
             quickLookCurrentItem = null;
         }
     }
+
+    window.addEventListener('wheel', (e) => {
+        if (!isQuickLookOpen) return;
+        e.preventDefault();
+
+        const now = Date.now();
+        if (now - quickLookOpenTime < 180 || now - lastWheelTime < 150) {
+            return;
+        }
+
+        const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+        if (Math.abs(delta) < 15) return;
+
+        lastWheelTime = now;
+        if (delta > 0) {
+            navigateQuickLook(1);
+        } else if (delta < 0) {
+            navigateQuickLook(-1);
+        }
+    }, { passive: false });
+
+    document.addEventListener('auxclick', (e) => {
+        if (e.button === 1) {
+            e.preventDefault();
+            if (isQuickLookOpen) {
+                closeQuickLook();
+                return;
+            }
+            const card = e.target.closest('.card');
+            if (card && card.dataset.id && typeof allItems !== 'undefined') {
+                const id = card.dataset.id;
+                const item = allItems.find(i => String(i.id) === id);
+                if (item) {
+                    openQuickLook(item);
+                }
+            }
+        }
+    });
+
+    document.addEventListener('mousedown', (e) => {
+        if (e.button === 1) {
+            e.preventDefault();
+        }
+    });
 
     const quicklookCloseBtn = document.getElementById('quicklook-close-btn');
     if (quicklookCloseBtn) {
@@ -1540,6 +1631,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const isArtistView = window.location.hash.startsWith('#/artist/');
 
         if (isQuickLookOpen) {
+            if (e.code === 'ArrowRight' || e.code === 'ArrowDown') {
+                e.preventDefault();
+                navigateQuickLook(1);
+                return;
+            }
+            if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') {
+                e.preventDefault();
+                navigateQuickLook(-1);
+                return;
+            }
             if (e.code === 'Space' || e.code === 'Escape') {
                 e.preventDefault();
                 closeQuickLook();
