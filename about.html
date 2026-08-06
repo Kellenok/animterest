@@ -83,41 +83,33 @@
     <main class="about-content">
         <a href="index.html" class="back-link">&larr; Return to Explorer</a>
 
-        <h2>Visual Artist Guide for AI</h2>
-        <p>Welcome to the visual reference tool for the <strong>Anima 2B</strong> parameter model.</p>
-        <p>This library features over 20,000+ artist tags based on the Danbooru dataset. Our explorer provides visual
-            benchmarking for Stable Diffusion and ComfyUI users, showcasing how the model interprets different artistic
-            styles, from classic masters to modern illustrators.</p>
+        <h2>Visual Guide</h2>
+        <p>Anima 2B Explorer shows how the Anima 2B model draws 40,000 artists from the Danbooru dataset.</p>
+        <p>We generated each image with the prompt <strong>1girl, artist_name</strong>. We locked the CFG and steps to standard values. This shows the base interpretation of the style.</p>
 
-        <h3>Core Features</h3>
+        <h3>Features</h3>
         <ul class="feature-list">
-            <li><strong>20,000+ Artist Styles</strong>: Comprehensive visual database generated with optimized
-                parameters in the Anima 2B model.</li>
-            <li><strong>High-Resolution Previews</strong>: Click on any card to view the generation in full detail. Use
-                left/right keys to navigate.</li>
-            <li><strong>Smart Sorting</strong>:
-                <ul>
-                    <li><strong>Name</strong>: Alphabetical navigation.</li>
-                    <li><strong>Uniqueness</strong>: Artists sorted by how distinct their visual fingerprint is.</li>
-                    <li><strong>Works</strong>: Sorted by number of works in the original dataset (popularity).</li>
-                </ul>
-            </li>
-            <li><strong>Favorites System</strong>: Click the heart to curate your personal prompt book. Export and
-                import your curation as JSON across devices.</li>
-            <li><strong>Text Export</strong>: Quickly export a raw `.txt` list of your favorite artists to drop straight
-                into ComfyUI wildcards.</li>
-            <li><strong>Search & Jump</strong>: Filter by specific artist names or jump to specific popularity ranks
-                instantly.</li>
+            <li><strong>40,000 Styles</strong>: Browse the artists in a responsive grid. Change the grid size with the slider.</li>
+            <li><strong>Sort</strong>: Order the artists by Name, Works (dataset popularity), Uniqueness, Date, or Random.</li>
+            <li><strong>Similar Artists</strong>: Find artists with a related style.</li>
+            <li><strong>Favorites</strong>: Save artists to your personal list. Export the list as a JSON file or a TXT file for ComfyUI wildcards.</li>
         </ul>
 
-        <h3>Technical Specs</h3>
-        <p>All images were generated purely via the prompt: <strong>1girl, artist_name</strong> to ensure the model's
-            base interpretation of the style is untainted by complex prompt engineering. CFG and steps were locked to
-            standard benchmarks.</p>
+        <h3>Navigation and Hotkeys</h3>
+        <ul class="feature-list">
+            <li><strong>Arrow Keys</strong>: Move the focus across the grid.</li>
+            <li><strong>Mouse Click</strong>: Open the QuickLook preview.</li>
+            <li><strong>Double-click / Double-tap</strong>: Add the artist to your favorites.</li>
+            <li><strong>Middle-click</strong>: Open the QuickLook preview.</li>
+            <li><strong>Scroll Wheel</strong>: Switch photos in the QuickLook preview.</li>
+            <li><strong>F</strong>: Add the artist to your favorites.</li>
+            <li><strong>C</strong>: Copy the artist name to the clipboard.</li>
+            <li><strong>Enter</strong>: Open the Similar Artists panel.</li>
+            <li><strong>Escape</strong>: Close the active window.</li>
+        </ul>
 
-        <h3>Support & Credits</h3>
-        <p>This explorer is maintained as a free resource for the AI art community. If you found it useful for your
-            prompting workflows, consider supporting the continued development mapping other datasets.</p>
+        <h3>Support</h3>
+        <p>This explorer is a free resource. If it improves your workflow, you can support the project.</p>
         <p>Created by <strong>ThetaCursed</strong>.</p>
     </main>
 
