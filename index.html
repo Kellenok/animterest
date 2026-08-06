@@ -97,12 +97,12 @@
         <div class="sh-column sh-actions" id="txt-export-container" style="display: none;">
             <h2 class="sh-title">Actions</h2>
             <div class="sh-links">
-                <button id="export-txt-btn" class="sh-link action-btn">Export Text List</button>
                 <div id="favorites-controls-wrapper"
                     style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px;">
-                    <button id="import-favorites-btn" class="sh-link action-btn">Import JSON State</button>
-                    <button id="save-favorites-btn" class="sh-link action-btn">Export JSON State</button>
-                    <input type="file" id="import-favorites-input" accept=".json" style="display: none;">
+                    <button id="import-favorites-btn" class="sh-link action-btn">Import (JSON/TXT)</button>
+                    <button id="export-txt-btn" class="sh-link action-btn">Export (TXT)</button>
+                    <button id="save-favorites-btn" class="sh-link action-btn">Export (JSON)</button>
+                    <input type="file" id="import-favorites-input" accept=".json,.txt" style="display: none;">
                 </div>
             </div>
         </div>
@@ -121,7 +121,6 @@
     <!-- Main UI: Dynamic Grid Gallery -->
     <main id="view-gallery" class="main-content view-section">
 
-        <div id="toast-notification" aria-live="polite"></div>
 
         <button id="scroll-to-top" class="scroll-to-top" aria-label="Scroll to top">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -146,7 +145,7 @@
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
-                Back
+                Back <span class="hotkey-hint">(Esc)</span>
             </button>
         </div>
 
@@ -166,7 +165,7 @@
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                         </svg>
-                        Copy Prompt
+                        Copy Prompt <span class="hotkey-hint">(C)</span>
                     </button>
                     <button id="details-favorite-btn" class="detail-action-btn">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -175,7 +174,7 @@
                                 d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
                             </path>
                         </svg>
-                        Favorite
+                        Favorite <span class="hotkey-hint">(F)</span>
                     </button>
                     <a id="details-danbooru-link" class="detail-action-btn nav-link" href="#" target="_blank"
                         rel="noopener noreferrer">
@@ -191,6 +190,39 @@
         </div>
     </main>
 
+    <!-- QuickLook Modal Overlay -->
+    <div id="quicklook-modal" class="swipe-overlay">
+        <div class="swipe-header">
+            <div id="quicklook-artist-name" class="swipe-artist-name"></div>
+            <button id="quicklook-close-btn" class="swipe-close-btn" aria-label="Close">&times;</button>
+        </div>
+        <div class="swipe-container">
+            <div class="quicklook-content">
+                <img id="quicklook-image" class="swipe-image swipe-image--current" src="" alt="QuickLook Preview">
+                <div class="quicklook-actions">
+                    <button id="quicklook-fav-btn" class="detail-action-btn">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                        <span id="quicklook-fav-text">Favorite</span> <span class="hotkey-hint">(F)</span>
+                    </button>
+                    <button id="quicklook-copy-btn" class="detail-action-btn">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy Name <span class="hotkey-hint">(C)</span>
+                    </button>
+                    <button id="quicklook-details-btn" class="detail-action-btn primary">
+                        Details <span class="hotkey-hint">(↵)</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="swipe-hint">Press <kbd>Space</kbd> or <kbd>Esc</kbd> to close</div>
+    </div>
+
+    <div id="toast-notification" aria-live="polite"></div>
     <script src="app/data.js?v=23"></script>
     <script src="app/app.js?v=23"></script>
 </body>

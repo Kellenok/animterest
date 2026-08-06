@@ -1,4 +1,4 @@
-﻿/* Global CSS Variables and Media Queries */
+/* Global CSS Variables and Media Queries */
 :root {
     --bg: #050505;
     --text: #ffffff;
@@ -402,6 +402,8 @@ input[type="range"]::-webkit-slider-thumb {
     flex-direction: column;
     overflow: hidden;
     cursor: zoom-in;
+    scroll-margin-top: 100px;
+    scroll-margin-bottom: 40px;
 }
 
 .card__visual {
@@ -421,7 +423,8 @@ input[type="range"]::-webkit-slider-thumb {
     transition: filter 0.3s ease;
 }
 
-.card:hover .card__image {
+.card:hover .card__image,
+.card.keyboard-focus .card__image {
     filter: brightness(0.75);
 }
 
@@ -433,7 +436,8 @@ input[type="range"]::-webkit-slider-thumb {
     transition: color 0.2s ease;
 }
 
-.card:hover .card__info {
+.card:hover .card__info,
+.card.keyboard-focus .card__info {
     color: var(--text-muted);
 }
 
@@ -495,7 +499,9 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .card:hover .favorite-button,
-.card:hover .info-button {
+.card.keyboard-focus .favorite-button,
+.card:hover .info-button,
+.card.keyboard-focus .info-button {
     opacity: 1;
 }
 
@@ -545,7 +551,8 @@ input[type="range"]::-webkit-slider-thumb {
     opacity: 0;
 }
 
-.card:hover .info-button {
+.card:hover .info-button,
+.card.keyboard-focus .info-button {
     opacity: 1;
 }
 
@@ -725,83 +732,53 @@ input[type="range"]::-webkit-slider-thumb {
     overflow: hidden;
 }
 
-.swipe-image {
-    position: absolute;
-    max-height: 80vh;
-    max-width: 80vw;
-    object-fit: contain;
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
-}
-
-.swipe-image--current {
-    transform: scale(1);
-    opacity: 1;
+.quicklook-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: min(80vw, 49.3vh);
+    max-height: 85vh;
+    position: relative;
     z-index: 10000;
 }
 
-.swipe-image--prev {
-    transform: scale(0.85) translateX(-60vw);
-    opacity: 0.3;
+.swipe-image {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 832 / 1216;
+    object-fit: cover;
+    background-color: var(--surface);
+    border-radius: 8px;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
 }
 
-.swipe-image--next {
-    transform: scale(0.85) translateX(60vw);
-    opacity: 0.3;
+.quicklook-actions {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    gap: 8px;
+    margin-top: 12px;
+    z-index: 10002;
 }
 
-.swipe-like-feedback {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    opacity: 0;
-    z-index: 10005;
-    pointer-events: none;
+.quicklook-actions .detail-action-btn {
+    flex: 1;
+    backdrop-filter: blur(12px);
+    background: rgba(30, 30, 30, 0.85);
 }
 
-.swipe-like-feedback.show {
-    animation: quick-pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+.quicklook-actions .detail-action-btn.active {
+    color: #ff4b4b;
+    border-color: rgba(255, 75, 75, 0.4);
 }
 
-@keyframes quick-pop {
-    0% {
-        transform: translate(-50%, -50%) scale(0);
-        opacity: 0;
-    }
-
-    50% {
-        transform: translate(-50%, -50%) scale(1.2);
-        opacity: 1;
-    }
-
-    100% {
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 0;
-    }
-}
-
-.swipe-like-feedback .heart {
-    width: 100px;
-    height: 100px;
-    background: var(--text);
-    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath d='M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z'/%3E%3C/svg%3E") no-repeat center;
-    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath d='M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z'/%3E%3C/svg%3E") no-repeat center;
-}
-
-.swipe-hint {
-    position: absolute;
-    bottom: 32px;
-    font-size: 11px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-}
-
-.swipe-hint kbd {
-    font-family: inherit;
-    font-weight: 600;
-    color: var(--text);
-    padding: 0 4px;
+.hotkey-hint {
+    opacity: 0.45;
+    font-size: 10px;
+    font-weight: 500;
+    margin-left: 2px;
+    text-transform: none;
+    letter-spacing: 0;
 }
 
 /* Artist Details Page (SPA View) */
