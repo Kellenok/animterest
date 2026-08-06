@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isOnline = window.location.protocol.startsWith('http');
     const imageBasePath = isOnline
-        ? 'https://raw.githubusercontent.com/ThetaCursed/Anima-Assets/main/'
+        ? 'https://huggingface.co/datasets/Kellenok/anima/resolve/main/'
         : '';
 
     let db;
@@ -353,8 +353,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let filteredItems;
         if (searchTerm) {
+            const normalizeStr = (str) => String(str).toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+            const normalizedSearchTerm = normalizeStr(searchTerm);
+            
             filteredItems = sortedItems.filter(item =>
-                item.artist.toLowerCase().includes(searchTerm)
+                normalizeStr(item.artist).includes(normalizedSearchTerm)
             );
         } else {
             filteredItems = sortedItems;
@@ -471,6 +474,14 @@ document.addEventListener('DOMContentLoaded', () => {
             bottomSpacer.style.height = `${bottomPadding}px`;
             galleryContainer.appendChild(bottomSpacer);
         }
+
+        if (typeof keyboardFocusedIndex !== 'undefined' && keyboardFocusedIndex >= 0 && currentItems && currentItems[keyboardFocusedIndex]) {
+            const activeId = String(currentItems[keyboardFocusedIndex].id);
+            const activeCard = galleryContainer.querySelector(`.card[data-id="${activeId}"]`);
+            if (activeCard) {
+                activeCard.classList.add('keyboard-focus');
+            }
+        }
     }
 
     // Add or remove an artist from DB favorites and update UI
@@ -479,49 +490,70 @@ document.addEventListener('DOMContentLoaded', () => {
         const store = transaction.objectStore(STORE_NAME);
 
         if (favorites.has(item.id)) {
-
             store.delete(item.id);
             favorites.delete(item.id);
             favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
-            showToast('Removed from favorites');
-            if (currentView === 'gallery') {
-
+            showToast(`Removed ${item.artist} from favorites`);
+            if (button) {
                 button.title = 'Add to favorites';
                 button.setAttribute('aria-label', 'Add to favorites');
                 button.classList.remove('favorited');
             }
         } else {
-
             const favItem = { id: item.id, timestamp: Date.now() };
             store.put(favItem);
             favorites.set(item.id, favItem.timestamp);
             favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
-            showToast('Added to favorites');
+            showToast(`Added ${item.artist} to favorites`);
+            if (button) {
+                button.title = 'Remove from favorites';
+                button.setAttribute('aria-label', 'Remove from favorites');
+                button.classList.add('favorited');
+            }
+        }
 
-            button.title = 'Remove from favorites';
-            button.setAttribute('aria-label', 'Remove from favorites');
-            button.classList.add('favorited');
+        // Update card favorite button in DOM if present
+        const activeCard = document.querySelector(`.card[data-id="${item.id}"]`);
+        if (activeCard) {
+            const cardFavBtn = activeCard.querySelector('.favorite-button');
+            if (cardFavBtn) {
+                const isFav = favorites.has(item.id);
+                cardFavBtn.classList.toggle('favorited', isFav);
+                cardFavBtn.title = isFav ? 'Remove from favorites' : 'Add to favorites';
+            }
+        }
+
+        // Update details page button if currently viewing this item
+        if (typeof currentDetailsItem !== 'undefined' && currentDetailsItem && String(currentDetailsItem.id) === String(item.id)) {
+            updateDetailsFavoriteButton(item.id);
+        }
+
+        // Update QuickLook button if QuickLook is open
+        if (typeof isQuickLookOpen !== 'undefined' && isQuickLookOpen) {
+            updateQuickLookFavUI();
         }
 
         if (currentView === 'favorites') {
+            if (button) {
+                const card = button.closest('.card');
+                if (card) {
+                    card.style.transition = 'opacity 0.15s ease, transform 0.15s ease, margin 0.15s ease, padding 0.15s ease, max-height 0.15s ease';
+                    card.style.transform = 'scale(0.8)';
+                    card.style.opacity = '0';
+                    card.style.margin = '0';
+                    card.style.padding = '0';
+                    card.style.maxHeight = '0px';
 
-            const card = button.closest('.card');
-            if (card) {
+                    card.addEventListener('transitionend', () => {
+                        card.remove();
 
-                card.style.transition = 'opacity 0.15s ease, transform 0.15s ease, margin 0.15s ease, padding 0.15s ease, max-height 0.15s ease';
-                card.style.transform = 'scale(0.8)';
-                card.style.opacity = '0';
-                card.style.margin = '0';
-                card.style.padding = '0';
-                card.style.maxHeight = '0px';
-
-                card.addEventListener('transitionend', () => {
-                    card.remove();
-
-                    if (favorites.size === 0) {
-                        galleryContainer.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">No favorites yet.</p>';
-                    }
-                }, { once: true });
+                        if (favorites.size === 0) {
+                            galleryContainer.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">No favorites yet.</p>';
+                        }
+                    }, { once: true });
+                }
+            } else {
+                renderView();
             }
         }
 
@@ -671,17 +703,58 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
-                const data = JSON.parse(e.target.result);
-                if (!data.favorites || !Array.isArray(data.favorites)) {
-                    throw new Error('Invalid file format');
+                let importedFavorites = [];
+                let totalAttempted = 0;
+                const content = e.target.result;
+                
+                try {
+                    const data = JSON.parse(content);
+                    if (data.favorites && Array.isArray(data.favorites)) {
+                        importedFavorites = data.favorites;
+                        totalAttempted = data.favorites.length;
+                    } else if (data.favourites && Array.isArray(data.favourites)) {
+                        const now = Date.now();
+                        const normalizeName = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+                        
+                        data.favourites.forEach(nameOrId => {
+                            const rawLine = String(nameOrId).trim().toLowerCase();
+                            const normalizedLine = normalizeName(rawLine);
+                            const artist = allItems.find(a => normalizeName(a.artist) === normalizedLine || String(a.id) === rawLine);
+                            if (artist) {
+                                importedFavorites.push({ id: String(artist.id), timestamp: now });
+                            }
+                        });
+                        totalAttempted = data.favourites.length;
+                        if (importedFavorites.length === 0 && data.favourites.length > 0) {
+                            throw new Error('No matching artists found in JSON array');
+                        }
+                    } else {
+                        throw new Error('Not a valid favorites JSON');
+                    }
+                } catch (jsonError) {
+                    const lines = content.split(/\r?\n/).map(line => line.trim().toLowerCase()).filter(line => line);
+                    const now = Date.now();
+                    const normalizeName = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+                    totalAttempted = lines.length;
+                    
+                    lines.forEach(rawLine => {
+                        const normalizedLine = normalizeName(rawLine);
+                        const artist = allItems.find(a => normalizeName(a.artist) === normalizedLine || String(a.id) === rawLine);
+                        if (artist) {
+                            importedFavorites.push({ id: String(artist.id), timestamp: now });
+                        }
+                    });
+                    
+                    if (importedFavorites.length === 0 && lines.length > 0) {
+                        throw new Error('No matching artists found in text file');
+                    }
                 }
 
                 let importedCount = 0;
                 const transaction = db.transaction(STORE_NAME, 'readwrite');
                 const store = transaction.objectStore(STORE_NAME);
 
-                data.favorites.forEach(fav => {
-
+                importedFavorites.forEach(fav => {
                     if (fav.id && fav.timestamp && !favorites.has(String(fav.id))) {
                         store.put({ id: String(fav.id), timestamp: fav.timestamp });
                         importedCount++;
@@ -693,13 +766,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderView();
 
                 favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
-                showToast(importedCount > 0
-                    ? `${importedCount} new favorites imported!`
-                    : 'No new favorites to import.');
+                showToast(`Imported ${importedCount}/${totalAttempted} artists`);
 
             } catch (error) {
                 console.error('Error importing favorites:', error);
-                showToast('Error: Could not import favorites. Invalid file.');
+                showToast('Error: Could not import favorites. Invalid file or no matches.');
             } finally {
 
                 importFavoritesInput.value = '';
@@ -1037,6 +1108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render the artist details page including hero image and similar artists
     function renderArtistView(item) {
         currentDetailsItem = item;
+        detailsFocusedIndex = -1;
 
         viewGallery.classList.add('hidden');
         controlsContainerWrapper.style.display = 'none';
@@ -1171,7 +1243,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                 </svg>
-                Unfavorite
+                Unfavorite <span class="hotkey-hint">(F)</span>
             `;
             detailsFavoriteBtn.style.color = '#ff4b4b';
         } else {
@@ -1180,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                 </svg>
-                Favorite
+                Favorite <span class="hotkey-hint">(F)</span>
             `;
             detailsFavoriteBtn.style.color = '';
         }
@@ -1271,9 +1343,225 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    let hoveredItem = null;
+    let isQuickLookOpen = false;
+    let quickLookCurrentItem = null;
+
+    document.addEventListener('mouseover', (e) => {
+        const card = e.target.closest('.card');
+        if (card && card.dataset.id && typeof allItems !== 'undefined') {
+            const id = card.dataset.id;
+            hoveredItem = allItems.find(item => String(item.id) === id);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('.card')) {
+            hoveredItem = null;
+        }
+    });
+
+    function updateQuickLookFavUI() {
+        if (!quickLookCurrentItem) return;
+        const favBtn = document.getElementById('quicklook-fav-btn');
+        const favText = document.getElementById('quicklook-fav-text');
+        if (favBtn && favText) {
+            const isFavorited = favorites.has(quickLookCurrentItem.id);
+            favBtn.classList.toggle('active', isFavorited);
+            favText.textContent = isFavorited ? 'Unfavorite' : 'Favorite';
+        }
+    }
+
+    function openQuickLook(item) {
+        if (!item) return;
+        quickLookCurrentItem = item;
+        const modal = document.getElementById('quicklook-modal');
+        const img = document.getElementById('quicklook-image');
+        const name = document.getElementById('quicklook-artist-name');
+
+        if (modal && img && name) {
+            img.src = item.image;
+            name.textContent = item.artist;
+            updateQuickLookFavUI();
+            modal.classList.add('visible');
+            isQuickLookOpen = true;
+        }
+    }
+
+    function updateQuickLookItem(item) {
+        if (!item) return;
+        quickLookCurrentItem = item;
+        const img = document.getElementById('quicklook-image');
+        const name = document.getElementById('quicklook-artist-name');
+        if (img && name) {
+            img.src = item.image;
+            name.textContent = item.artist;
+            updateQuickLookFavUI();
+        }
+    }
+
+    function closeQuickLook() {
+        const modal = document.getElementById('quicklook-modal');
+        if (modal) {
+            modal.classList.remove('visible');
+            isQuickLookOpen = false;
+            quickLookCurrentItem = null;
+        }
+    }
+
+    const quicklookCloseBtn = document.getElementById('quicklook-close-btn');
+    if (quicklookCloseBtn) {
+        quicklookCloseBtn.addEventListener('click', closeQuickLook);
+    }
+    const quicklookFavBtn = document.getElementById('quicklook-fav-btn');
+    if (quicklookFavBtn) {
+        quicklookFavBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (quickLookCurrentItem) {
+                toggleFavorite(quickLookCurrentItem);
+                updateQuickLookFavUI();
+            }
+        });
+    }
+    const quicklookCopyBtn = document.getElementById('quicklook-copy-btn');
+    if (quicklookCopyBtn) {
+        quicklookCopyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (quickLookCurrentItem) {
+                navigator.clipboard.writeText(quickLookCurrentItem.artist).then(() => {
+                    showToast(`Copied ${quickLookCurrentItem.artist} to clipboard`);
+                });
+            }
+        });
+    }
+    const quicklookDetailsBtn = document.getElementById('quicklook-details-btn');
+    if (quicklookDetailsBtn) {
+        quicklookDetailsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (quickLookCurrentItem) {
+                const artistToOpen = quickLookCurrentItem.artist;
+                closeQuickLook();
+                window.location.hash = `#/artist/${encodeURIComponent(artistToOpen)}`;
+            }
+        });
+    }
+    const quicklookModal = document.getElementById('quicklook-modal');
+    if (quicklookModal) {
+        quicklookModal.addEventListener('click', (e) => {
+            if (e.target === quicklookModal || e.target.classList.contains('swipe-container')) {
+                closeQuickLook();
+            }
+        });
+    }
+
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && window.location.hash.startsWith('#/artist/')) {
-            closeArtistDetails();
+        if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+            if (e.code === 'Escape') e.target.blur();
+            return;
+        }
+
+        const isArtistView = window.location.hash.startsWith('#/artist/');
+
+        if (isQuickLookOpen) {
+            if (e.code === 'Space' || e.code === 'Escape') {
+                e.preventDefault();
+                closeQuickLook();
+                return;
+            }
+            if (e.code === 'KeyF' && quickLookCurrentItem) {
+                toggleFavorite(quickLookCurrentItem);
+                return;
+            }
+            if (e.code === 'KeyC' && quickLookCurrentItem) {
+                navigator.clipboard.writeText(quickLookCurrentItem.artist).then(() => {
+                    showToast(`Copied ${quickLookCurrentItem.artist} to clipboard`);
+                });
+                return;
+            }
+            if (e.code === 'Enter' && quickLookCurrentItem) {
+                const artistToOpen = quickLookCurrentItem.artist;
+                closeQuickLook();
+                window.location.hash = `#/artist/${encodeURIComponent(artistToOpen)}`;
+                return;
+            }
+        }
+
+        if (e.code === 'Space') {
+            e.preventDefault();
+            if (isQuickLookOpen) {
+                closeQuickLook();
+                return;
+            }
+
+            let targetItem = null;
+
+            // 1st Priority: Keyboard selection
+            if (isArtistView) {
+                if (typeof detailsFocusedIndex !== 'undefined' && detailsFocusedIndex >= 0) {
+                    const cards = detailsGrid.querySelectorAll('.card');
+                    if (cards[detailsFocusedIndex]) {
+                        const id = cards[detailsFocusedIndex].dataset.id;
+                        targetItem = allItems.find(item => String(item.id) === id);
+                    }
+                }
+            } else {
+                if (typeof keyboardFocusedIndex !== 'undefined' && keyboardFocusedIndex >= 0 && currentItems && currentItems[keyboardFocusedIndex]) {
+                    targetItem = currentItems[keyboardFocusedIndex];
+                }
+            }
+
+            // 2nd Priority: Mouse hover
+            if (!targetItem) {
+                targetItem = hoveredItem;
+            }
+
+            // 3rd Priority: Hero artist (if on details page)
+            if (!targetItem && isArtistView) {
+                targetItem = currentDetailsItem;
+            }
+
+            if (targetItem) {
+                openQuickLook(targetItem);
+            }
+            return;
+        }
+
+        if (e.code === 'Escape') {
+            if (isQuickLookOpen) {
+                closeQuickLook();
+                return;
+            }
+            if (isArtistView) {
+                closeArtistDetails();
+            }
+            return;
+        }
+
+        if (e.code === 'Slash') {
+            e.preventDefault();
+            searchInput.focus();
+        }
+
+        if (isArtistView) {
+            if (e.code === 'KeyF' && currentDetailsItem) {
+                const detailsFavBtn = document.getElementById('details-favorite-btn');
+                if (detailsFavBtn) detailsFavBtn.click();
+            }
+            if (e.code === 'KeyC' && currentDetailsItem) {
+                navigator.clipboard.writeText(currentDetailsItem.artist).then(() => {
+                    showToast(`Copied ${currentDetailsItem.artist} to clipboard`);
+                });
+            }
+        } else {
+            // In gallery view, allow 'F' to like the currently keyboard-focused card
+            if (e.code === 'KeyF' && typeof keyboardFocusedIndex !== 'undefined' && keyboardFocusedIndex >= 0 && currentItems && currentItems[keyboardFocusedIndex]) {
+                const activeId = String(currentItems[keyboardFocusedIndex].id);
+                const activeCard = galleryContainer.querySelector(`.card[data-id="${activeId}"]`);
+                if (activeCard) {
+                    const favBtn = activeCard.querySelector('.favorite-button');
+                    if (favBtn) favBtn.click();
+                }
+            }
         }
     });
 
@@ -1349,16 +1637,217 @@ document.addEventListener('DOMContentLoaded', () => {
     sortByRandomBtn.addEventListener('click', () => handleSortClick('random'));
     sortByDateBtn.addEventListener('click', () => handleSortClick('date'));
 
+    let keyboardFocusedIndex = -1;
+
+    function getGridColumnCount() {
+        if (!galleryContainer.children.length) return 1;
+        const computedStyle = window.getComputedStyle(galleryContainer);
+        const gridCols = computedStyle.getPropertyValue('grid-template-columns');
+        return gridCols.split(' ').length || 1;
+    }
+
+    function getFirstVisibleCardIndex() {
+        if (!currentItems || !currentItems.length) return 0;
+        const cards = galleryContainer.querySelectorAll('.card');
+        for (let i = 0; i < cards.length; i++) {
+            const rect = cards[i].getBoundingClientRect();
+            if (rect.top >= 90 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)) {
+                const id = cards[i].dataset.id;
+                const idx = currentItems.findIndex(item => String(item.id) === id);
+                if (idx !== -1) return idx;
+            }
+        }
+        if (cards.length > 0) {
+            const id = cards[0].dataset.id;
+            const idx = currentItems.findIndex(item => String(item.id) === id);
+            if (idx !== -1) return idx;
+        }
+        return 0;
+    }
+
+    let detailsFocusedIndex = -1;
+
+    function getDetailsGridColumnCount() {
+        const computedStyle = window.getComputedStyle(detailsGrid);
+        const gridCols = computedStyle.getPropertyValue('grid-template-columns');
+        return gridCols.split(' ').length || 1;
+    }
+
+    function getFirstVisibleDetailsCardIndex(cards) {
+        for (let i = 0; i < cards.length; i++) {
+            const rect = cards[i].getBoundingClientRect();
+            if (rect.top >= 0 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    function ensureDetailsCardVisible(card) {
+        if (!card) return;
+        const rect = card.getBoundingClientRect();
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+
+        if (rect.top < 20) {
+            window.scrollBy({ top: rect.top - 20, behavior: 'smooth' });
+        } else if (rect.bottom > viewportHeight) {
+            window.scrollBy({ top: rect.bottom - viewportHeight + 20, behavior: 'smooth' });
+        }
+    }
+
+    let lastMouseX = -1;
+    let lastMouseY = -1;
+    document.addEventListener('mousemove', (e) => {
+        // Ignore synthetic mousemove events triggered by scrolling
+        if (e.clientX === lastMouseX && e.clientY === lastMouseY) return;
+        lastMouseX = e.clientX;
+        lastMouseY = e.clientY;
+
+        if (keyboardFocusedIndex !== -1) {
+            const cards = galleryContainer.querySelectorAll('.card');
+            cards.forEach(c => c.classList.remove('keyboard-focus'));
+            keyboardFocusedIndex = -1;
+        }
+        if (detailsFocusedIndex !== -1) {
+            const cards = detailsGrid.querySelectorAll('.card');
+            cards.forEach(c => c.classList.remove('keyboard-focus'));
+            detailsFocusedIndex = -1;
+        }
+    });
+
+    function scrollToFocusedItem() {
+        if (keyboardFocusedIndex < 0 || !currentItems || !currentItems[keyboardFocusedIndex]) return;
+
+        const gridComputed = window.getComputedStyle(galleryContainer);
+        const columns = gridComputed.getPropertyValue('grid-template-columns').split(' ').length || 1;
+
+        const containerWidth = galleryContainer.clientWidth - (columns - 1) * 2;
+        const cardWidth = containerWidth / columns;
+        const cardHeight = (cardWidth * (1216 / 832)) + 40;
+
+        const itemRow = Math.floor(keyboardFocusedIndex / columns);
+        const itemTop = galleryContainer.offsetTop + (itemRow * cardHeight);
+        const itemBottom = itemTop + cardHeight;
+
+        const headerHeight = 90;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+        const currentScrollTop = window.scrollY;
+        const currentScrollBottom = currentScrollTop + viewportHeight;
+
+        let newScrollTop = currentScrollTop;
+
+        if (itemTop < currentScrollTop + headerHeight) {
+            newScrollTop = itemTop - headerHeight;
+        } else if (itemBottom > currentScrollBottom) {
+            newScrollTop = itemBottom - viewportHeight + 20;
+        }
+
+        if (Math.abs(newScrollTop - currentScrollTop) > 1) {
+            window.scrollTo({ top: Math.max(0, newScrollTop), behavior: 'smooth' });
+        }
+
+        const activeId = String(currentItems[keyboardFocusedIndex].id);
+        const cards = galleryContainer.querySelectorAll('.card');
+        cards.forEach(c => c.classList.remove('keyboard-focus'));
+        const activeCard = galleryContainer.querySelector(`.card[data-id="${activeId}"]`);
+        if (activeCard) {
+            activeCard.classList.add('keyboard-focus');
+        }
+    }
+
     function handleGridHotkeys(e) {
+        if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
 
-        if (e.target.tagName === 'INPUT') return;
+        if (e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) return;
 
-        if (e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) {
+        const isArtistView = window.location.hash.startsWith('#/artist/');
+
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+            e.preventDefault();
+
+            if (isArtistView) {
+                const cards = Array.from(detailsGrid.querySelectorAll('.card'));
+                if (!cards.length) return;
+
+                if (detailsFocusedIndex === -1 || !cards[detailsFocusedIndex]) {
+                    detailsFocusedIndex = getFirstVisibleDetailsCardIndex(cards);
+                } else {
+                    cards[detailsFocusedIndex].classList.remove('keyboard-focus');
+                    let cols = getDetailsGridColumnCount();
+
+                    if (e.code === 'ArrowRight') detailsFocusedIndex++;
+                    else if (e.code === 'ArrowLeft') detailsFocusedIndex--;
+                    else if (e.code === 'ArrowDown') detailsFocusedIndex += cols;
+                    else if (e.code === 'ArrowUp') detailsFocusedIndex -= cols;
+                }
+
+                if (detailsFocusedIndex < 0) detailsFocusedIndex = 0;
+                if (detailsFocusedIndex >= cards.length) {
+                    detailsFocusedIndex = cards.length - 1;
+                    loadMoreSimilarArtists(6);
+                }
+
+                const targetCard = cards[detailsFocusedIndex];
+                if (targetCard) {
+                    targetCard.classList.add('keyboard-focus');
+                    ensureDetailsCardVisible(targetCard);
+                }
+
+                if (isQuickLookOpen && cards[detailsFocusedIndex]) {
+                    const id = cards[detailsFocusedIndex].dataset.id;
+                    const activeItem = allItems.find(item => String(item.id) === id);
+                    if (activeItem) updateQuickLookItem(activeItem);
+                }
+                return;
+            } else {
+                if (!currentItems || !currentItems.length) return;
+
+                if (keyboardFocusedIndex === -1 || keyboardFocusedIndex >= currentItems.length) {
+                    keyboardFocusedIndex = getFirstVisibleCardIndex();
+                } else {
+                    let cols = getGridColumnCount();
+                    if (e.code === 'ArrowRight') keyboardFocusedIndex++;
+                    else if (e.code === 'ArrowLeft') keyboardFocusedIndex--;
+                    else if (e.code === 'ArrowDown') keyboardFocusedIndex += cols;
+                    else if (e.code === 'ArrowUp') keyboardFocusedIndex -= cols;
+                }
+
+                if (keyboardFocusedIndex < 0) keyboardFocusedIndex = 0;
+                if (keyboardFocusedIndex >= currentItems.length) {
+                    keyboardFocusedIndex = currentItems.length - 1;
+                }
+
+                scrollToFocusedItem();
+
+                if (isQuickLookOpen && currentItems[keyboardFocusedIndex]) {
+                    updateQuickLookItem(currentItems[keyboardFocusedIndex]);
+                }
+                return;
+            }
+        }
+
+        if (e.code === 'Enter') {
+            if (isArtistView) {
+                const cards = detailsGrid.querySelectorAll('.card');
+                if (detailsFocusedIndex >= 0 && cards[detailsFocusedIndex]) {
+                    const infoBtn = cards[detailsFocusedIndex].querySelector('.info-button');
+                    if (infoBtn) infoBtn.click();
+                    else cards[detailsFocusedIndex].click();
+                }
+            } else {
+                if (keyboardFocusedIndex >= 0 && currentItems && currentItems[keyboardFocusedIndex]) {
+                    const activeId = String(currentItems[keyboardFocusedIndex].id);
+                    const activeCard = galleryContainer.querySelector(`.card[data-id="${activeId}"]`);
+                    if (activeCard) {
+                        const infoBtn = activeCard.querySelector('.info-button');
+                        if (infoBtn) infoBtn.click();
+                    }
+                }
+            }
             return;
         }
 
         const key = parseInt(e.key, 10);
-
         if (key >= 1 && key <= 5) {
             gridSlider.value = key;
             updateGridColumns(key);
