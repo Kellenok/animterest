@@ -23,19 +23,16 @@ self.addEventListener('fetch', event => {
                 }
 
                 try {
-                    // <img> tags make 'no-cors' requests by default, which return opaque responses (status 0, ok: false).
-                    // We must force 'cors' mode so Hugging Face returns a 200 OK that we can cache.
-                    const fetchOptions = {
-                        mode: event.request.mode === 'no-cors' ? 'cors' : event.request.mode,
-                        credentials: 'omit',
-                        headers: event.request.headers
-                    };
+                    // Force CORS mode so we don't get an opaque response (status 0).
+                    // Hugging Face LFS returns Access-Control-Allow-Origin: * so CORS works.
+                    const corsRequest = new Request(event.request.url, { mode: 'cors' });
+                    const networkResponse = await fetch(corsRequest);
                     
-                    const fetchRequest = new Request(event.request, fetchOptions);
-                    const networkResponse = await fetch(fetchRequest);
-                    
-                    // Only cache successful responses (200 OK)
+                    // Only cache successful responses (not errors)
+                    // networkResponse.ok is true for 200 OK
                     if (networkResponse && networkResponse.ok) {
+                        // Store the final 200 OK response against the original request
+                        // Note: we can use event.request or event.request.url as key
                         cache.put(event.request, networkResponse.clone());
                     }
                     
