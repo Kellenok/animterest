@@ -90,10 +90,38 @@ document.addEventListener('DOMContentLoaded', () => {
         updateVisibleFavorites
     };
 
-    const isOnline = window.location.protocol.startsWith('http');
-    const imageBasePath = isOnline
-        ? 'https://huggingface.co/datasets/Kellenok/anima/resolve/main/'
-        : '';
+    let dataBasePath = 'https://huggingface.co/datasets/Kellenok/anima/resolve/main/';
+
+    const FORCE_ONLINE = true;
+
+    async function checkLocalDataset() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isForceOnline = FORCE_ONLINE || urlParams.has('online') || urlParams.get('mode') === 'online';
+
+        if (isForceOnline) {
+            console.log('Force online mode enabled. Using Hugging Face dataset.');
+            return;
+        }
+
+        if (window.location.protocol.startsWith('http')) {
+            try {
+                let sampleId = 0;
+                if (typeof galleryData !== 'undefined' && galleryData.length > 0) {
+                    sampleId = galleryData[0].id;
+                }
+                const numId = parseInt(sampleId, 10);
+                const folderIndex = isNaN(numId) ? 0 : Math.abs(numId) % 10;
+
+                const res = await fetch(`./similar/part_${folderIndex}/${sampleId}.js`, { method: 'HEAD' });
+                if (res.ok) {
+                    dataBasePath = './';
+                    console.log('Local dataset detected. Using local media and similar data.');
+                    return;
+                }
+            } catch (e) { }
+        }
+        console.log('Using Hugging Face dataset for media and similar data.');
+    }
 
     let db;
     const DB_NAME = 'StyleGalleryDB';
@@ -335,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 allItems = galleryData.map(item => ({
                     artist: item.name,
-                    image: `${imageBasePath}images/${item.p}/${item.id}.webp`,
+                    image: `${dataBasePath}images/${item.p}/${item.id}.webp`,
                     worksCount: item.post_count,
                     id: item.id,
                     uniqueness_score: item.uniqueness_score
@@ -438,7 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (searchTerm) {
             const normalizeStr = (str) => String(str).toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
             const normalizedSearchTerm = normalizeStr(searchTerm);
-            
+
             filteredItems = sortedItems.filter(item =>
                 normalizeStr(item.artist).includes(normalizedSearchTerm)
             );
@@ -789,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 let importedFavorites = [];
                 let totalAttempted = 0;
                 const content = e.target.result;
-                
+
                 try {
                     const data = JSON.parse(content);
                     if (data.favorites && Array.isArray(data.favorites)) {
@@ -798,7 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (data.favourites && Array.isArray(data.favourites)) {
                         const now = Date.now();
                         const normalizeName = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
-                        
+
                         data.favourites.forEach(nameOrId => {
                             const rawLine = String(nameOrId).trim().toLowerCase();
                             const normalizedLine = normalizeName(rawLine);
@@ -819,7 +847,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const now = Date.now();
                     const normalizeName = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
                     totalAttempted = lines.length;
-                    
+
                     lines.forEach(rawLine => {
                         const normalizedLine = normalizeName(rawLine);
                         const artist = allItems.find(a => normalizeName(a.artist) === normalizedLine || String(a.id) === rawLine);
@@ -827,7 +855,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             importedFavorites.push({ id: String(artist.id), timestamp: now });
                         }
                     });
-                    
+
                     if (importedFavorites.length === 0 && lines.length > 0) {
                         throw new Error('No matching artists found in text file');
                     }
@@ -1298,7 +1326,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!document.getElementById(scriptId)) {
                 const script = document.createElement('script');
                 script.id = scriptId;
-                script.src = `app/similar/${itemId}.js`;
+                const folderIndex = parseInt(itemId, 10) % 10;
+                script.src = `${dataBasePath}similar/part_${folderIndex}/${itemId}.js`;
                 script.onerror = () => {
                     spinner.textContent = 'No similar artists found.';
 
@@ -2123,15 +2152,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateSortButtonsUI();
 
-    initDB()
-        .then(() => {
-            loadInitialData().then(() => {
-
-                handleHashChange();
+    checkLocalDataset().then(() => {
+        initDB()
+            .then(() => {
+                loadInitialData().then(() => {
+                    handleHashChange();
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                galleryContainer.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">Failed to initialize database.</p>';
             });
-        })
-        .catch(err => {
-            console.error(err);
-            galleryContainer.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">Failed to initialize database.</p>';
-        });
+    });
 });

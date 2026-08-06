@@ -7,4 +7,5 @@ node_modules
 .aiexclude
 embeddings.npy
 embeddings_ids.json
-images/[0-9]*/
+anima/*
+.py
