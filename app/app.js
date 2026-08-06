@@ -188,6 +188,21 @@ document.addEventListener('DOMContentLoaded', () => {
         let lastTap = 0;
         let tapTimeout = null;
 
+        const performLike = (e) => {
+            if (e.target.closest('.favorite-button') || e.target.closest('.info-button') || e.target.closest('.detail-action-btn') || e.target.closest('.swipe-close-btn')) {
+                return;
+            }
+            e.preventDefault();
+            const item = getItemCallback();
+            if (item) {
+                const wasFav = favorites.has(item.id);
+                toggleFavorite(item);
+                if (!wasFav) {
+                    triggerHeartPop(element);
+                }
+            }
+        };
+
         element.addEventListener('touchend', (e) => {
             if (e.target.closest('.favorite-button') || e.target.closest('.info-button') || e.target.closest('.detail-action-btn') || e.target.closest('.swipe-close-btn')) {
                 return;
@@ -199,11 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tapLength < 300 && tapLength > 0) {
                 e.preventDefault();
                 clearTimeout(tapTimeout);
-                const item = getItemCallback();
-                if (item) {
-                    toggleFavorite(item);
-                    triggerHeartPop(element);
-                }
+                performLike(e);
                 lastTap = 0;
             } else {
                 lastTap = currentTime;
@@ -212,15 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         element.addEventListener('dblclick', (e) => {
-            if (e.target.closest('.favorite-button') || e.target.closest('.info-button') || e.target.closest('.detail-action-btn') || e.target.closest('.swipe-close-btn')) {
-                return;
-            }
-            e.preventDefault();
-            const item = getItemCallback();
-            if (item) {
-                toggleFavorite(item);
-                triggerHeartPop(element);
-            }
+            performLike(e);
         });
     }
 
@@ -277,12 +280,22 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
+        let cardClickTimer = null;
         card.addEventListener('click', (e) => {
-            if (!e.target.closest('.favorite-button') && !e.target.closest('.info-button')) {
+            if (e.target.closest('.favorite-button') || e.target.closest('.info-button')) return;
+
+            if (cardClickTimer) {
+                clearTimeout(cardClickTimer);
+                cardClickTimer = null;
+                return;
+            }
+
+            cardClickTimer = setTimeout(() => {
+                cardClickTimer = null;
                 navigator.clipboard.writeText('@' + item.artist).then(() => {
                     showToast('Artist name copied to clipboard!');
                 });
-            }
+            }, 250);
         });
 
         attachDoubleLikeHandler(card, () => item);
