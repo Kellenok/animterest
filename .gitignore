@@ -8,4 +8,4 @@ node_modules
 embeddings.npy
 embeddings_ids.json
 anima/*
-.py
+*.py

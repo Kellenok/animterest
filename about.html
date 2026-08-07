@@ -68,15 +68,39 @@
 <body>
     <!-- Top Navigation Bar -->
     <header class="top-nav">
-        <div class="nav-left">
+        <a href="index.html" class="nav-left" style="text-decoration: none; color: inherit;">
             <h1 class="logo">Anima 2B</h1>
             <span class="logo-divider">/</span>
-            <span class="logo-subtitle">About</span>
+            <span class="logo-subtitle">Explorer</span>
+        </a>
+
+        <div class="nav-center">
+            <div class="search-pill search-wrapper">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="search-icon">
+                    <path
+                        d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <input type="text" id="search-input" class="search-input" placeholder="Search artist..."
+                    aria-label="Search artist">
+                <button id="clear-search-btn" class="clear-input-btn" aria-label="Clear search"
+                    style="display: none;">&times;</button>
+                <div class="input-divider"></div>
+
+                <div class="jump-controls" style="display: flex; align-items: center;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" class="jump-icon" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 5V19M12 5L6 11M12 5L18 11" />
+                    </svg>
+                    <input type="number" id="jump-input" class="jump-input search-input" placeholder="Jump to rank..."
+                        min="1" aria-label="Jump to numerical rank">
+                    <button id="clear-jump-btn" class="clear-input-btn" aria-label="Clear jump"
+                        style="display: none;">&times;</button>
+                </div>
+            </div>
         </div>
 
         <div class="nav-right">
-            <a href="https://app.lava.top/products/17f881bc-a113-413a-9bde-9e59287f4dfb/eb748d4e-7c34-47fd-80fd-8ef86946ae85"
-                class="support-btn" target="_blank" rel="noopener noreferrer">Support</a>
         </div>
     </header>
 
@@ -98,12 +122,10 @@
         <h3>Navigation and Hotkeys</h3>
         <ul class="feature-list">
             <li><strong>Arrow Keys</strong>: Move the focus across the grid.</li>
-            <li><strong>Mouse Click</strong>: Open the QuickLook preview.</li>
-            <li><strong>Double-click / Double-tap</strong>: Add the artist to your favorites.</li>
-            <li><strong>Middle-click</strong>: Open the QuickLook preview.</li>
-            <li><strong>Scroll Wheel</strong>: Switch photos in the QuickLook preview.</li>
-            <li><strong>F</strong>: Add the artist to your favorites.</li>
-            <li><strong>C</strong>: Copy the artist name to the clipboard.</li>
+            <li><strong>Double-click / Double-tap / F</strong>: Add the artist to your favorites.</li>
+            <li><strong>Middle-click / Space</strong>: Open the QuickLook preview.</li>
+            <li><strong>Scroll Wheel / Arrow Keys</strong>: Switch photos in the QuickLook preview.</li>
+            <li><strong>C / Left-click</strong>: Copy the artist name to the clipboard.</li>
             <li><strong>Enter</strong>: Open the Similar Artists panel.</li>
             <li><strong>Escape</strong>: Close the active window.</li>
         </ul>
@@ -113,8 +135,18 @@
         <p>Created by <strong>ThetaCursed</strong>.</p>
     </main>
 
-    <script src="app/data.js"></script>
-    <script src="app/app.js"></script>
+    <script>
+        document.getElementById('search-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                window.location.href = 'index.html?search=' + encodeURIComponent(this.value);
+            }
+        });
+        document.getElementById('jump-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                window.location.href = 'index.html?jump=' + encodeURIComponent(this.value);
+            }
+        });
+    </script>
 </body>
 
 </html>

@@ -59,8 +59,6 @@
         </div>
 
         <div class="nav-right">
-            <a href="https://app.lava.top/products/17f881bc-a113-413a-9bde-9e59287f4dfb/eb748d4e-7c34-47fd-80fd-8ef86946ae85"
-                class="support-btn" target="_blank" rel="noopener noreferrer">Support</a>
         </div>
     </header>
 
@@ -74,8 +72,22 @@
                         class="sh-count"></span></a>
                 <a href="#/favorites" id="tab-favorites" class="sh-link">Favorites <span id="favorites-counter"
                         class="sh-count">0</span></a>
+                <a href="#/boards" id="tab-boards" class="sh-link">Boards <span id="boards-counter"
+                        class="sh-count">0</span></a>
                 <a href="about.html" class="sh-link">About & Info</a>
             </div>
+            <script>
+                (function() {
+                    var h = window.location.hash;
+                    if (h === '#/boards' || h.indexOf('#/folder/') === 0) {
+                        document.getElementById('tab-gallery').classList.remove('active');
+                        document.getElementById('tab-boards').classList.add('active');
+                    } else if (h === '#/favorites') {
+                        document.getElementById('tab-gallery').classList.remove('active');
+                        document.getElementById('tab-favorites').classList.add('active');
+                    }
+                })();
+            </script>
         </div>
 
         <div class="sh-column sh-sort">
@@ -99,6 +111,9 @@
             <div class="sh-links">
                 <div id="favorites-controls-wrapper"
                     style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px;">
+                    <button id="back-to-boards-btn" class="sh-link action-btn" style="display: none;">&larr; Back to Boards</button>
+                    <button id="rename-board-btn" class="sh-link action-btn" style="display: none;">Rename Board</button>
+                    <button id="delete-board-btn" class="sh-link action-btn" style="display: none; color: #ff4b4b;">Delete Board</button>
                     <button id="import-favorites-btn" class="sh-link action-btn">Import (JSON/TXT)</button>
                     <button id="export-txt-btn" class="sh-link action-btn">Export (TXT)</button>
                     <button id="save-favorites-btn" class="sh-link action-btn">Export (JSON)</button>
@@ -133,6 +148,7 @@
             <p>Loading dataset...</p>
         </div>
 
+        <div id="boards-container" class="boards-grid hidden"></div>
         <div id="gallery-container" class="gallery-grid"></div>
     </main>
 
@@ -176,6 +192,12 @@
                         </svg>
                         Favorite <span class="hotkey-hint">(F)</span>
                     </button>
+                    <button id="details-save-board-btn" class="detail-action-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                        Save to Board
+                    </button>
                     <a id="details-danbooru-link" class="detail-action-btn nav-link" href="#" target="_blank"
                         rel="noopener noreferrer">
                         Danbooru ↗
@@ -206,6 +228,12 @@
                         </svg>
                         <span id="quicklook-fav-text">Favorite</span> <span class="hotkey-hint">(F)</span>
                     </button>
+                    <button id="quicklook-save-board-btn" class="detail-action-btn">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                        Save to Board
+                    </button>
                     <button id="quicklook-copy-btn" class="detail-action-btn">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -222,9 +250,52 @@
         <div class="swipe-hint">Press <kbd>Space</kbd> or <kbd>Esc</kbd> to close</div>
     </div>
 
+    <!-- Board Selection Modal -->
+    <!-- Custom Board Action Modal -->
+    <div id="custom-board-modal" class="site-modal-overlay">
+        <div class="site-modal-box">
+            <h3 id="custom-modal-title" class="site-modal-header">Rename Board</h3>
+            <p id="custom-modal-desc" class="site-modal-desc" style="display: none;"></p>
+            <input type="text" id="custom-modal-input" class="site-modal-input" placeholder="Board name">
+            <div class="site-modal-actions">
+                <button id="custom-modal-cancel" class="site-modal-btn">Cancel</button>
+                <button id="custom-modal-confirm" class="site-modal-btn primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Board Selection Dropdown Overlay -->
+    <div id="board-selection-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9998;"></div>
+    
+    <!-- Board Selection Dropdown -->
+    <div id="board-selection-dropdown" class="hidden" style="position: fixed; z-index: 9999; width: 260px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden;">
+        <div style="padding: 12px; border-bottom: 1px solid var(--border);">
+            <div style="position: relative;">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--text-muted)" stroke-width="2" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="board-search-input" placeholder="Search boards..." style="width: 100%; padding: 8px 8px 8px 32px; border: 1px solid var(--border); border-radius: 6px; background: rgba(255,255,255,0.05); color: var(--text); outline: none; font-size: 13px;">
+            </div>
+        </div>
+        <div id="board-selection-list" style="flex: 1; max-height: 250px; overflow-y: auto; padding: 4px;">
+            <!-- Board items injected here -->
+        </div>
+        <div id="new-board-btn-container" style="padding: 8px; border-top: 1px solid var(--border); cursor: pointer;">
+            <div id="create-board-label-box" style="display: flex; align-items: center; padding: 6px; border-radius: 4px;">
+                <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </div>
+                <span id="create-board-label" style="font-weight: 500; font-size: 14px; color: var(--text);">Create board</span>
+            </div>
+            <div id="create-board-input-box" class="hidden" style="display: flex; gap: 8px; padding: 4px;">
+                <input type="text" id="new-board-input" placeholder="Board name..." style="flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: rgba(0,0,0,0.2); color: var(--text); font-size: 13px; outline: none;">
+                <button id="new-board-btn" class="action-btn primary" style="padding: 4px 10px; min-width: 0; font-size: 13px;">Create</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-notification" aria-live="polite"></div>
-    <script src="app/data.js?v=23"></script>
-    <script src="app/app.js?v=23"></script>
+    <script src="app/data.js?v=63"></script>
+    <script src="app/app.js?v=63"></script>
+    <script src="app/folders.js?v=63"></script>
 </body>
 
 </html>

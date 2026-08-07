@@ -32,12 +32,23 @@ This tool helps you see how the Anima 2B model interprets an artist style before
 - **Escape:** Close the active window.
 
 ## Offline Usage
-You can run this tool locally. The application size is under 5MB because images stream from Hugging Face.
-1. Download the ZIP file or clone the repository (`git clone https://github.com/ThetaCursed/Anima-Style-Explorer.git`).
-2. Extract the files.
+You can run this tool locally. By default, the application size is under 5MB because images stream from Hugging Face.
+1. Download the ZIP file or clone the repository:
+```bash
+git clone https://github.com/Kellenok/animterest.git
+```
+2. Extract the files if downloaded as ZIP.
 3. Open `index.html` in your web browser.
 
-Note: Images load from the Hugging Face dataset `Kellenok/anima` and require an internet connection. The browser caches the images automatically via a Service Worker.
+Note: By default, images and similar artists data load from the Hugging Face dataset `Kellenok/anima` and require an internet connection (though they are automatically cached via a Service Worker).
+
+**Full Offline Mode:**
+If you want to use the application completely offline, you can clone the dataset directly into the project folder:
+1. Inside the project folder, run:
+```bash
+git clone https://huggingface.co/datasets/Kellenok/anima
+```
+2. The application will automatically detect the local `anima` folder and load all images and similar artist data directly from your local drive.
 
 ## Technical Stack
 - **Core Model:** Anima 2B

@@ -2,51 +2,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const FOLDERS_STORE_NAME = 'folders';
     const FOLDER_ARTISTS_STORE_NAME = 'folder_artists';
 
-    const foldersPanelWrapper = document.getElementById('folders-panel-wrapper');
-    const foldersListContainer = document.getElementById('folders-list');
-    const addFolderBtn = document.getElementById('add-folder-btn');
-    const galleryContainer = document.getElementById('gallery-container');
+    const boardsContainer = document.getElementById('boards-container');
+    const backToBoardsBtn = document.getElementById('back-to-boards-btn');
+    const boardsCounter = document.getElementById('boards-counter');
+    const boardModal = document.getElementById('board-selection-modal');
+    const boardModalCloseBtn = document.getElementById('board-modal-close');
+    const boardSelectionList = document.getElementById('board-selection-list');
+    const newBoardInput = document.getElementById('new-board-input');
+    const newBoardBtn = document.getElementById('new-board-btn');
+    const boardSearchInput = document.getElementById('board-search-input');
+    const newBoardBtnContainer = document.getElementById('new-board-btn-container');
+    const createBoardLabelBox = document.getElementById('create-board-label-box');
+    const createBoardInputBox = document.getElementById('create-board-input-box');
+    
+    const detailsSaveBtn = document.getElementById('details-save-board-btn');
+    const quicklookSaveBtn = document.getElementById('quicklook-save-board-btn');
+
+    const boardDropdown = document.getElementById('board-selection-dropdown');
+    const boardOverlay = document.getElementById('board-selection-overlay');
 
     let folders = [];
-    let folderArtists = new Map(); // Map<folderId, Array<{id: string, added: number}>>
-    let allItemsMap = new Map(); // Map<artistId, artistData> for quick lookup
-    let activeFolderId = 'unsorted'; // 'unsorted' by default
+    let folderArtists = new Map();
+    let activeFolderId = null;
+    let targetArtistIdForSave = null;
     let db;
-
-    // --- Инициализация ---
 
     function initFolders() {
         db = window.appGlobals.db;
         if (!db) {
-            console.error("Database not initialized in app.js");
-            return;
+            console.error("Database not initialized for folders.");
+            return Promise.resolve();
         }
-        
-        // Populate allItemsMap from appGlobals.allItems
-        if (window.appGlobals.allItems) {
-            window.appGlobals.allItems.forEach(item => {
-                allItemsMap.set(item.id, item);
-            });
-        }
-        setupScrollListener();
-        loadDataAndRender();
+        return loadDataAndRender();
     }
 
     async function loadDataAndRender() {
         await loadFolders();
         await loadFolderArtists();
-        renderFolders();
+        updateBoardsCounter();
+        // If we are currently on the boards tab, render it immediately
+        if (window.appGlobals.currentView === 'boards') {
+            renderBoards();
+        }
     }
-
-    // --- Загрузка данных из IndexedDB ---
 
     function loadFolders() {
         return new Promise(resolve => {
-            const transaction = db.transaction(FOLDERS_STORE_NAME, 'readonly');
-            const store = transaction.objectStore(FOLDERS_STORE_NAME);
-            const request = store.getAll();
-            request.onsuccess = () => {
-                folders = request.result.sort((a, b) => a.name.localeCompare(b.name));
+            const tx = db.transaction(FOLDERS_STORE_NAME, 'readonly');
+            const store = tx.objectStore(FOLDERS_STORE_NAME);
+            const req = store.getAll();
+            req.onsuccess = () => {
+                folders = req.result.sort((a, b) => a.name.localeCompare(b.name));
                 resolve();
             };
         });
@@ -55,651 +61,772 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadFolderArtists() {
         return new Promise(resolve => {
             folderArtists.clear();
-            const transaction = db.transaction(FOLDER_ARTISTS_STORE_NAME, 'readonly');
-            const store = transaction.objectStore(FOLDER_ARTISTS_STORE_NAME);
-            const request = store.getAll();
-            request.onsuccess = () => {
-                request.result.forEach(item => {
-                    folderArtists.set(item.folderId, item.artistIds); // Загружаем как массив
+            const tx = db.transaction(FOLDER_ARTISTS_STORE_NAME, 'readonly');
+            const store = tx.objectStore(FOLDER_ARTISTS_STORE_NAME);
+            const req = store.getAll();
+            req.onsuccess = () => {
+                req.result.forEach(item => {
+                    folderArtists.set(item.folderId, item.artistIds);
                 });
                 resolve();
             };
         });
     }
 
-    // --- Отрисовка ---
-
-    function renderFolders() {
-        if (!foldersListContainer) return;
-        foldersListContainer.innerHTML = '';
-
-        // 1. Создаем и добавляем папку "Неотсортированное"
-        const unsortedFolderEl = createUnsortedFolderElement();
-        foldersListContainer.appendChild(unsortedFolderEl);
-
-        // 2. Отрисовываем папки, созданные пользователем
-        folders.forEach(folder => {
-            const folderEl = createFolderElement(folder);
-            if (folder.id === activeFolderId) folderEl.classList.add('active');
-            foldersListContainer.appendChild(folderEl);
-        });
-
-        // 3. Перемещаем кнопку "Add Folder" в конец сетки
-        if (addFolderBtn) {
-            foldersListContainer.appendChild(addFolderBtn);
-        }
-
-        // Поведение скролла теперь управляется постоянным слушателем событий
-    }
-
-    /**
-     * Устанавливает слушатель событий 'wheel' для контейнера папок,
-     * чтобы предотвратить прокрутку основной страницы, пока прокручивается сам контейнер.
-     */
-    function setupScrollListener() {
-        foldersListContainer.addEventListener('wheel', (e) => {
-            const el = foldersListContainer;
-            const { deltaY } = e;
-            const { scrollTop, scrollHeight, clientHeight } = el;
-
-            // Проверяем, есть ли вообще прокрутка в элементе
-            if (scrollHeight <= clientHeight) {
-                // Если прокрутки нет, ничего не делаем, событие всплывет и прокрутит страницу
-                return;
-            }
-
-            // Если крутим вниз (deltaY > 0)
-            if (deltaY > 0) {
-                // Если мы еще не достигли самого низа
-                if (scrollTop < scrollHeight - clientHeight) {
-                    e.preventDefault(); // Блокируем прокрутку страницы
-                    el.scrollTop += deltaY; // и прокручиваем панель вручную
-                }
-            } else { // Если крутим вверх (deltaY < 0)
-                // Если мы еще не на самом верху
-                if (scrollTop > 0) {
-                    e.preventDefault(); // Блокируем прокрутку страницы
-                    el.scrollTop += deltaY; // и прокручиваем панель вручную
-                }
-            }
-        }, { passive: false }); // passive: false необходимо для работы preventDefault()
-    }
-
     function getUnsortedArtistIds() {
-        const favorites = window.appGlobals.favorites;
-        if (!favorites) return new Set();
-
-        // 1. Собираем ID всех артистов, которые уже лежат в папках
-        const allCategorizedArtists = new Set();
-        for (const artistIdArray of folderArtists.values()) {
-            artistIdArray.forEach(item => allCategorizedArtists.add(item.id));
-        }
-
-        // 2. Находим ID артистов, которые есть в избранном, но не в папках
-        const favoriteArtistIds = Array.from(favorites.keys());
-        return new Set(favoriteArtistIds.filter(id => !allCategorizedArtists.has(id)));
+        const favorites = window.appGlobals.favorites || new Map();
+        return new Set(Array.from(favorites.keys()).map(id => String(id)));
     }
 
-    /**
-     * Создает элемент для виртуальной папки "Неотсортированное".
-     */
-    function createUnsortedFolderElement() {
-        const favorites = window.appGlobals.favorites;
-        const unsortedArtistIdsSet = getUnsortedArtistIds();
-        const unsortedArtistIds = Array.from(unsortedArtistIdsSet);
-
-        // 3. Сортируем ID по времени добавления в избранное (новые первыми)
-        unsortedArtistIds.sort((a, b) => favorites.get(b) - favorites.get(a));
-
-        const unsortedCount = unsortedArtistIds.length;
-        let lastUnsortedArtistImage = null;
-
-        // 4. Находим изображение для миниатюры (самый новый несортированный артист)
-        if (unsortedArtistIds.length > 0) {
-            const lastUnsortedArtistId = unsortedArtistIds[0];
-            const artistData = allItemsMap.get(lastUnsortedArtistId);
-            if (artistData) {
-                lastUnsortedArtistImage = artistData.image;
-            }
+    function updateBoardsCounter() {
+        if (boardsCounter) {
+            boardsCounter.textContent = folders.length.toLocaleString('en-US');
         }
-
-        // 5. Создаем DOM-элемент
-        const item = document.createElement('div');
-        item.className = 'folder-item folder-item--unsorted'; // Добавляем специальный класс
-        item.dataset.folderId = 'unsorted'; // Специальный ID
-        if (activeFolderId === 'unsorted') {
-            item.classList.add('active');
-        }
-
-        const thumbnailContainer = document.createElement('div');
-        thumbnailContainer.className = 'folder-item-thumbnail-container';
-
-        if (lastUnsortedArtistImage) {
-            thumbnailContainer.style.backgroundImage = `url('${lastUnsortedArtistImage}')`;
-            const thumbnailImg = document.createElement('img');
-            thumbnailImg.src = lastUnsortedArtistImage;
-            thumbnailImg.alt = 'Unsorted';
-            thumbnailImg.className = 'folder-item-thumbnail';
-            thumbnailImg.loading = 'lazy';
-            thumbnailContainer.appendChild(thumbnailImg);
-        }
-
-        item.innerHTML = `
-            <span class="folder-name">Unsorted</span>
-            <span class="folder-count">${unsortedCount}</span>
-        `;
-        item.appendChild(thumbnailContainer);
-
-        // Создаем кнопку "очистки" для Неотсортированной папки
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'folder-delete-btn';
-        deleteBtn.innerHTML = '&times;';
-        deleteBtn.title = 'Clear all unsorted favorites';
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            handleClearUnsortedFolder();
-        });
-        item.insertBefore(deleteBtn, item.firstChild);
-
-        // Обработчик клика для фильтрации
-        item.addEventListener('click', () => {
-            setActiveFolder('unsorted');
-        });
-
-
-        // Эта папка не должна быть переименовываемой, поэтому dblclick не добавляем.
-        // Но она должна принимать перетаскиваемые карточки (хотя это бессмысленно, т.к. они и так там)
-        // Оставим логику drop для консистентности, но она ничего не будет делать.
-        item.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            item.classList.add('drag-over');
-        });
-
-        item.addEventListener('dragleave', () => {
-            item.classList.remove('drag-over');
-        });
-
-        item.addEventListener('drop', (e) => {
-            e.preventDefault();
-            item.classList.remove('drag-over');
-            // Карточки уже в "Неотсортированном", если они не в других папках.
-            // Можно показать уведомление.
-            window.appGlobals.showToast('This artist is already in Unsorted.');
-        });
-
-        return item;
     }
 
-    function createFolderElement(folder) {
-        const item = document.createElement('div');
-        item.className = 'folder-item';
-        item.dataset.folderId = folder.id;
+    function renderBoards(searchTerm = '', sortType = 'name', sortDirection = 'asc') {
+        if (!boardsContainer) return;
+        boardsContainer.innerHTML = '';
 
-        const artistCount = (folderArtists.get(folder.id) || []).length;
+        const term = searchTerm.toLowerCase().trim();
 
-        // Основной контейнер, который будет содержать все элементы
-        const thumbnailContainer = document.createElement('div');
-        thumbnailContainer.className = 'folder-item-thumbnail-container';
-
-        if (folder.lastArtistId) {
-            const lastArtistData = allItemsMap.get(folder.lastArtistId);
-            const lastArtistImage = lastArtistData?.image;
-
-            // Устанавливаем изображение как фон для контейнера
-            thumbnailContainer.style.backgroundImage = `url('${lastArtistImage}')`;
-            const thumbnailImg = document.createElement('img');
-            thumbnailImg.src = lastArtistImage;
-            thumbnailImg.alt = folder.name;
-            thumbnailImg.className = 'folder-item-thumbnail';
-            thumbnailImg.loading = 'lazy';
-            thumbnailContainer.appendChild(thumbnailImg);
-        }
-        // Создаем кнопку удаления
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'folder-delete-btn';
-        deleteBtn.innerHTML = '&times;';
-        deleteBtn.title = 'Delete folder';
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Останавливаем всплытие, чтобы не сработал клик по папке
-            handleDeleteFolder(folder.id, folder.name, artistCount);
-        });
-
-        item.innerHTML = `
-            <span class="folder-name">${folder.name}</span>
-            <span class="folder-count">${artistCount}</span>
-        `;
-        item.appendChild(thumbnailContainer);
-        // Добавляем кнопку удаления в DOM
-        item.insertBefore(deleteBtn, item.firstChild);
+        // 1. Favorites Board
+        const unsortedSet = getUnsortedArtistIds();
+        const unsortedCount = unsortedSet.size;
         
-        // Обработчик клика для фильтрации
-        item.addEventListener('click', (e) => {
-            if (e.target.tagName !== 'INPUT') setActiveFolder(folder.id);
-        });
+        let renderedCount = 0;
 
-        // Переименование по двойному клику
-        item.addEventListener('dblclick', (e) => {
-            // Предотвращаем срабатывание, если кликнули на инпут
-            if (e.target.tagName === 'INPUT') return;
+        if (!term || 'favorites'.includes(term) || 'unsorted'.includes(term)) {
+            const unsortedIds = Array.from(unsortedSet);
+            // sort by newest
+            unsortedIds.sort((a, b) => (window.appGlobals.favorites.get(b) || 0) - (window.appGlobals.favorites.get(a) || 0));
+            
+            const unsortedEl = createBoardCard('unsorted', 'Favorites', unsortedCount, unsortedIds);
+            boardsContainer.appendChild(unsortedEl);
+            renderedCount++;
+        }
 
-            // Добавляем класс для режима переименования
-            item.classList.add('is-renaming');
-
-            const folderNameEl = item.querySelector('.folder-name');
-            const oldName = folder.name;
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = oldName;
-            input.className = 'search-input'; // Используем существующий стиль
-            // Стили для инпута, чтобы он выглядел как элемент папки
-            input.style.position = 'absolute';
-            input.style.bottom = '8px';
-            input.style.left = '8px';
-            input.style.right = '8px';
-            input.style.width = 'calc(100% - 16px)';
-            input.style.padding = '0';
-            input.style.background = 'transparent';
-            input.style.border = 'none';
-            input.style.color = '#fff';
-            input.style.zIndex = '3';
-            item.appendChild(input);
-            input.focus();
-
-            const saveName = () => {
-                const newName = input.value.trim();
-                if (newName && newName !== oldName) {
-                    folder.name = newName;
-                    const transaction = db.transaction(FOLDERS_STORE_NAME, 'readwrite');
-                    transaction.objectStore(FOLDERS_STORE_NAME).put(folder);                    
-                    folderNameEl.textContent = newName;
-                } else {
-                    folderNameEl.textContent = oldName; // Возвращаем старое имя, если ввод пустой
-                }
-                input.remove();
-                // Убираем класс после сохранения
-                item.classList.remove('is-renaming');
-            };
-
-            input.addEventListener('blur', saveName);
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    input.blur();
-                } else if (e.key === 'Escape') {
-                    input.value = oldName;
-                    input.blur();
-                }
+        let sortedFolders = [...folders];
+        if (sortType === 'name') {
+            sortedFolders.sort((a, b) => {
+                const cmp = a.name.localeCompare(b.name);
+                return sortDirection === 'asc' ? cmp : -cmp;
             });
+        } else if (sortType === 'date') {
+            sortedFolders.sort((a, b) => {
+                const cmp = a.created - b.created;
+                return sortDirection === 'asc' ? cmp : -cmp;
+            });
+        } else if (sortType === 'rank') {
+            sortedFolders.sort((a, b) => {
+                const countA = (folderArtists.get(a.id) || []).length;
+                const countB = (folderArtists.get(b.id) || []).length;
+                return sortDirection === 'asc' ? countA - countB : countB - countA;
+            });
+        }
+
+        // 2. Custom Boards
+        sortedFolders.forEach(folder => {
+            if (term && !folder.name.toLowerCase().includes(term)) return;
+            const items = folderArtists.get(folder.id) || [];
+            // sort by newest
+            const sortedItems = [...items].sort((a, b) => (b.added || 0) - (a.added || 0)).map(item => (item && typeof item === 'object' && item.id !== undefined) ? item.id : item);
+            const folderEl = createBoardCard(folder.id, folder.name, items.length, sortedItems);
+            boardsContainer.appendChild(folderEl);
+            renderedCount++;
         });
 
-        // Drag and Drop
-        item.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            item.classList.add('drag-over');
-        });
-
-        item.addEventListener('dragleave', () => {
-            item.classList.remove('drag-over');
-        });
-
-        item.addEventListener('drop', (e) => {
-            e.preventDefault();
-            item.classList.remove('drag-over'); 
-            const data = e.dataTransfer.getData('application/json');
-            addArtistToFolder(folder.id, data);
-        });
-
-        return item;
-    }
-
-    function setActiveFolder(folderId, shouldRender = true) {
-        if (activeFolderId === folderId && shouldRender) return; // Не делаем ничего, если папка уже активна
-
-        activeFolderId = folderId;
-
-        // Обновляем классы
-        const allFolderItems = foldersListContainer.querySelectorAll('.folder-item');
-        allFolderItems.forEach(item => {
-            item.classList.toggle('active', item.dataset.folderId === folderId);
-        });
-
-        // Вызываем перерисовку галереи в app.js
-        if (shouldRender && window.appGlobals && window.appGlobals.renderView) {
-            window.appGlobals.renderView();
-            // renderView() автоматически сбросит выделение
+        // 3. Empty State
+        if (renderedCount === 0) {
+            boardsContainer.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--text-muted);">
+                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.5; margin-bottom: 16px;">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="12" y1="8" x2="12" y2="16"></line>
+                        <line x1="8" y1="12" x2="16" y2="12"></line>
+                    </svg>
+                    <h3 style="margin-bottom: 8px; color: var(--text);">No boards found</h3>
+                    <p>Save an artist to a board to create your first one, or adjust your search.</p>
+                </div>
+            `;
         }
     }
 
-    function handleDeleteFolder(folderId, folderName, artistCount) {
-        let confirmationMessage = `Are you sure you want to delete the folder "${folderName}"?`;
-        if (artistCount > 0) {
-            confirmationMessage = `The folder "${folderName}" contains ${artistCount} artist(s).\n\nIf you delete it, these artists will also be REMOVED FROM FAVORITES.\n\nAre you sure you want to proceed?`;
-        } 
-
-        if (window.confirm(confirmationMessage)) {
-            deleteFolder(folderId);
-        }
+    function getArtistImage(artistId) {
+        const allItems = window.appGlobals.allItems || [];
+        const artistData = allItems.find(item => String(item.id) === String(artistId));
+        return artistData ? artistData.image : null;
     }
 
-    /**
-     * Обрабатывает запрос на очистку папки "Неотсортированное".
-     */
-    function handleClearUnsortedFolder() {
-        const artistIdsToDelete = getUnsortedArtistIds();
-        if (artistIdsToDelete.size === 0) {
-            window.appGlobals.showToast("Unsorted folder is already empty.");
-            return;
-        }
+    function renameFolder(id, newName) {
+        if (!newName || !newName.trim()) return;
+        const name = newName.trim();
+        const folder = folders.find(f => f.id === id);
+        if (!folder) return;
 
-        const confirmationMessage = `Are you sure you want to remove all ${artistIdsToDelete.size} unsorted artist(s) from your favorites? This action cannot be undone.`;
+        folder.name = name;
+        folders.sort((a, b) => a.name.localeCompare(b.name));
 
-        if (window.confirm(confirmationMessage)) {
-            const tx = db.transaction(window.appGlobals.STORE_NAME, 'readwrite');
-            const favoritesStore = tx.objectStore(window.appGlobals.STORE_NAME);
+        const tx = db.transaction(FOLDERS_STORE_NAME, 'readwrite');
+        tx.objectStore(FOLDERS_STORE_NAME).put(folder);
 
-            artistIdsToDelete.forEach(artistId => favoritesStore.delete(artistId));
-
-            tx.oncomplete = () => {
-                artistIdsToDelete.forEach(artistId => window.appGlobals.favorites.delete(artistId));
-                window.appGlobals.showToast(`${artistIdsToDelete.size} unsorted artist(s) removed from favorites.`);
-                
-                // Перерисовываем обе панели для полной синхронизации
-                renderFolders();
+        tx.oncomplete = () => {
+            if (window.appGlobals.showToast) {
+                window.appGlobals.showToast(`Renamed board to "${name}"`);
+            }
+            if (window.appGlobals.currentView === 'boards' || window.appGlobals.currentView === 'folder') {
                 window.appGlobals.renderView();
-            };
-
-            tx.onerror = (event) => {
-                window.appGlobals.showToast('Error clearing unsorted favorites.');
-                console.error("Error clearing unsorted favorites:", event.target.error);
-            };
-        }
+            }
+        };
     }
 
-    function deleteFolder(folderId) {
-        const artistIdsToDelete = (folderArtists.get(folderId) || []).map(item => item.id);
+    function deleteFolder(id) {
+        const folder = folders.find(f => f.id === id);
+        const folderName = folder ? folder.name : 'Board';
 
-        // 1. Удаляем из массивов в памяти
-        folders = folders.filter(f => f.id !== folderId);
+        const idx = folders.findIndex(f => f.id === id);
+        if (idx !== -1) folders.splice(idx, 1);
+        folderArtists.delete(id);
 
-        // 2. Используем одну транзакцию для удаления из всех трех таблиц
-        const tx = db.transaction([FOLDERS_STORE_NAME, FOLDER_ARTISTS_STORE_NAME, window.appGlobals.STORE_NAME], 'readwrite');
-        const folderStore = tx.objectStore(FOLDERS_STORE_NAME);
-        const folderArtistStore = tx.objectStore(FOLDER_ARTISTS_STORE_NAME);
-        const favoritesStore = tx.objectStore(window.appGlobals.STORE_NAME);
-
-        // Удаляем саму папку
-        folderStore.delete(folderId);
-        // Удаляем связь папки с артистами
-        folderArtistStore.delete(folderId);
-        // Удаляем артистов из этой папки из общего списка избранных
-        artistIdsToDelete.forEach(artistId => {
-            favoritesStore.delete(artistId);
-        });
+        const tx = db.transaction([FOLDERS_STORE_NAME, FOLDER_ARTISTS_STORE_NAME], 'readwrite');
+        tx.objectStore(FOLDERS_STORE_NAME).delete(id);
+        tx.objectStore(FOLDER_ARTISTS_STORE_NAME).delete(id);
 
         tx.oncomplete = () => {
-            // Обновляем данные в памяти после успешной транзакции
-            folderArtists.delete(folderId);
-            artistIdsToDelete.forEach(artistId => {
-                window.appGlobals.favorites.delete(artistId);
-            });
-
-            window.appGlobals.showToast(`Folder "${getFolderName(folderId, true)}" and ${artistIdsToDelete.length} artist(s) deleted.`);
-
-            // 3. Если удаленная папка была активной, переключаемся на "Неотсортированное".
-            if (activeFolderId === folderId) {
-                setActiveFolder('unsorted'); // Этот вызов также перерисует галерею
-            } else {
-                renderFolders(); // Перерисовываем панель папок
+            updateBoardsCounter();
+            if (window.appGlobals.showToast) {
+                window.appGlobals.showToast(`Deleted board "${folderName}"`);
             }
-        };
-        tx.onerror = (event) => {
-            window.appGlobals.showToast('Error deleting folder.');
-            console.error("Error deleting folder transaction:", event.target.error);
+            window.location.hash = '#/boards';
+            window.appGlobals.currentView = 'boards';
+            const renameBtn = document.getElementById('rename-board-btn');
+            const deleteBtn = document.getElementById('delete-board-btn');
+            if (renameBtn) renameBtn.style.display = 'none';
+            if (deleteBtn) deleteBtn.style.display = 'none';
+            if (backToBoardsBtn) backToBoardsBtn.style.display = 'none';
+            activeFolderId = null;
+            window.appGlobals.renderView();
         };
     }
 
-    // --- CRUD операции ---
+    function showCustomRenameModal(id, currentName) {
+        const modal = document.getElementById('custom-board-modal');
+        const title = document.getElementById('custom-modal-title');
+        const desc = document.getElementById('custom-modal-desc');
+        const input = document.getElementById('custom-modal-input');
+        const cancelBtn = document.getElementById('custom-modal-cancel');
+        const confirmBtn = document.getElementById('custom-modal-confirm');
 
-    function createNewFolder() {
-        const name = prompt("Enter new folder name:", "New Folder");
-        if (name) {
-            const newFolder = {
-                id: `folder-${Date.now()}`,
-                name: name.trim(),
-                lastArtistId: null // Поле для ID последнего добавленного артиста
-            };
-            folders.push(newFolder);
-            folders.sort((a, b) => a.name.localeCompare(b.name)); // Поддерживаем сортировку
+        if (!modal) return;
+        title.textContent = 'Rename Board';
+        desc.style.display = 'none';
+        input.style.display = 'block';
+        input.value = currentName || '';
+        confirmBtn.textContent = 'Save';
 
-            const transaction = db.transaction(FOLDERS_STORE_NAME, 'readwrite');
-            transaction.objectStore(FOLDERS_STORE_NAME).add(newFolder);
-            transaction.oncomplete = () => {
-                renderFolders();
-            };
-        }
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        input.focus();
+        input.select();
+
+        const close = () => {
+            modal.style.display = 'none';
+            cleanup();
+        };
+
+        const onConfirm = () => {
+            const val = input.value.trim();
+            if (val) {
+                renameFolder(id, val);
+            }
+            close();
+        };
+
+        const onKeyDown = (e) => {
+            if (e.key === 'Enter') onConfirm();
+            if (e.key === 'Escape') close();
+        };
+
+        const cleanup = () => {
+            cancelBtn.removeEventListener('click', close);
+            confirmBtn.removeEventListener('click', onConfirm);
+            input.removeEventListener('keydown', onKeyDown);
+        };
+
+        cancelBtn.addEventListener('click', close);
+        confirmBtn.addEventListener('click', onConfirm);
+        input.addEventListener('keydown', onKeyDown);
     }
 
-    function removeArtistFromPreviousFolder(artistId) {
-        let sourceFolderId = null;
-        let sourceFolderData = null;
-        // Ищем, в какой папке находится артист
-        for (const [folderId, artistIdArray] of folderArtists.entries()) {
-            const artistIndex = artistIdArray.findIndex(item => item.id === artistId);
-            if (artistIndex !== -1) {
-                artistIdArray.splice(artistIndex, 1); // Удаляем артиста из массива
-                sourceFolderId = folderId;
+    function showCustomDeleteModal(id, folderName) {
+        const modal = document.getElementById('custom-board-modal');
+        const title = document.getElementById('custom-modal-title');
+        const desc = document.getElementById('custom-modal-desc');
+        const input = document.getElementById('custom-modal-input');
+        const cancelBtn = document.getElementById('custom-modal-cancel');
+        const confirmBtn = document.getElementById('custom-modal-confirm');
 
-                // Обновляем данные в IndexedDB для исходной папки
-                const transaction = db.transaction(FOLDER_ARTISTS_STORE_NAME, 'readwrite');
-                const store = transaction.objectStore(FOLDER_ARTISTS_STORE_NAME);
-                if (artistIdArray.length > 0) {
-                    store.put({ folderId, artistIds: artistIdArray });
-                    transaction.oncomplete = () => {
-                        // После успешного обновления данных в БД, перерисовываем панель
-                        // чтобы обновить счетчик и, возможно, миниатюру.
-                        renderFolders();
-                    };
-                } else {
-                    store.delete(folderId); // Удаляем запись, если папка стала пустой
-                }
+        if (!modal) return;
+        title.textContent = 'Delete Board';
+        desc.textContent = `Are you sure you want to delete "${folderName}"? All saved styles in this board will remain in your explorer.`;
+        desc.style.display = 'block';
+        input.style.display = 'none';
+        confirmBtn.textContent = 'Delete';
+        confirmBtn.className = 'site-modal-btn danger';
+        cancelBtn.className = 'site-modal-btn';
 
-                // Находим данные папки для обновления миниатюры
-                sourceFolderData = folders.find(f => f.id === folderId);
-                break;
-            }
-        }
+        modal.style.display = 'flex';
 
-        // Если папка-источник была найдена и это не "Unsorted"
-        if (sourceFolderData) {
-            // Обновляем ее миниатюру, так как последний добавленный художник мог быть удален
-            const artistIdArrayForSource = folderArtists.get(sourceFolderData.id);
-            if (artistIdArrayForSource) {
-                if (artistIdArrayForSource.length > 0) {
-                    // Находим ID последнего добавленного артиста для обновления миниатюры
-                    const lastArtistId = artistIdArrayForSource.sort((a, b) => b.added - a.added)[0].id;
-                    updateFolderThumbnail(sourceFolderData.id, lastArtistId);
-                } else {
-                    // Если папка стала пустой, убираем миниатюру
-                    updateFolderThumbnail(sourceFolderData.id, null);
-                }
-            }
-        }
-        return sourceFolderId;
+        const close = () => {
+            modal.style.display = 'none';
+            cleanup();
+        };
+
+        const onConfirm = () => {
+            deleteFolder(id);
+            close();
+        };
+
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') close();
+        };
+
+        const cleanup = () => {
+            cancelBtn.removeEventListener('click', close);
+            confirmBtn.removeEventListener('click', onConfirm);
+            window.removeEventListener('keydown', onKeyDown);
+        };
+
+        cancelBtn.addEventListener('click', close);
+        confirmBtn.addEventListener('click', onConfirm);
+        window.addEventListener('keydown', onKeyDown);
     }
-    function addArtistToFolder(folderId, data) {
-        let artistIds;
-        try {
-            // Пытаемся распарсить как массив (мульти-выделение)
-            const parsedData = JSON.parse(data);
-            if (Array.isArray(parsedData)) {
-                artistIds = parsedData;
-            } else {
-                // Обратная совместимость, если передали не JSON-массив
-                artistIds = [String(data)];
-            }
-        } catch (e) {
-            // Если не JSON, считаем, что это одиночный ID
-            artistIds = [String(data)];
-        }
 
-        // Фильтруем ID, чтобы перемещать только тех, кто еще не в этой папке
-        const artistsToMove = artistIds.filter(id => 
-            !folderArtists.get(folderId)?.some(item => item.id === id)
-        );
+    function createBoardCard(id, name, count, artistIds) {
+        const card = document.createElement('div');
+        card.className = 'board-card';
+        card.style.position = 'relative';
 
-        if (artistsToMove.length === 0) {
-            window.appGlobals.showToast('Artist(s) are already in this folder.');
-            return;
-        }
-
-        const destinationFolderData = folders.find(f => f.id === folderId);
-        const lastArtistId = artistsToMove[artistsToMove.length - 1]; // Последний для миниатюры
-
-        // Используем одну транзакцию для всех операций
-        const tx = db.transaction([FOLDER_ARTISTS_STORE_NAME, FOLDERS_STORE_NAME], 'readwrite');
-        const folderArtistsStore = tx.objectStore(FOLDER_ARTISTS_STORE_NAME);
-        const foldersStore = tx.objectStore(FOLDERS_STORE_NAME);
-
-        // Удаляем художников из их предыдущих папок
-        artistsToMove.forEach(id => removeArtistFromPreviousFolder(id));
-
-        // Добавляем художников в новую папку
-        const targetFolderList = folderArtists.get(folderId) || [];
-        artistsToMove.forEach(id => {
-            targetFolderList.push({ id, added: Date.now() });
+        card.addEventListener('click', () => {
+            openFolderView(id);
         });
-        folderArtists.set(folderId, targetFolderList);
-        folderArtistsStore.put({ folderId, artistIds: targetFolderList });
 
-        // Обновляем миниатюру целевой папки
-        if (destinationFolderData) {
-            destinationFolderData.lastArtistId = lastArtistId;
-            foldersStore.put(destinationFolderData);
-        }
+        if (id !== 'unsorted') {
+            const menuBtn = document.createElement('button');
+            menuBtn.className = 'board-card-menu-btn';
+            menuBtn.innerHTML = '&#8942;'; // Vertical ellipsis
+            menuBtn.title = 'Board Options';
 
-        tx.oncomplete = () => {
-            // После успешной транзакции обновляем UI
-            renderFolders(); // Перерисовываем панель папок
+            menuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                
+                const existingPopover = document.getElementById('active-card-popover');
+                if (existingPopover) existingPopover.remove();
 
-            // Плавно удаляем карточки из галереи
-            artistsToMove.forEach(id => {
-                const cardToRemove = galleryContainer.querySelector(`.card[data-id="${id}"]`);
-                if (cardToRemove) {
-                    cardToRemove.style.transition = 'opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease 0.1s, margin 0.3s ease 0.1s, padding 0.3s ease 0.1s';
-                    cardToRemove.style.opacity = '0';
-                    cardToRemove.style.transform = 'scale(0.9)';
-                    cardToRemove.style.maxHeight = '0px';
-                    cardToRemove.style.margin = '0';
-                    cardToRemove.style.padding = '0';
-                    cardToRemove.addEventListener('transitionend', () => cardToRemove.remove(), { once: true });
-                }
+                const popover = document.createElement('div');
+                popover.id = 'active-card-popover';
+                popover.className = 'site-popover-menu';
+
+                const renameOpt = document.createElement('div');
+                renameOpt.className = 'site-popover-item';
+                renameOpt.textContent = 'Rename';
+                renameOpt.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    popover.remove();
+                    showCustomRenameModal(id, name);
+                });
+
+                const deleteOpt = document.createElement('div');
+                deleteOpt.className = 'site-popover-item danger';
+                deleteOpt.textContent = 'Delete';
+                deleteOpt.addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    popover.remove();
+                    showCustomDeleteModal(id, name);
+                });
+
+                popover.appendChild(renameOpt);
+                popover.appendChild(deleteOpt);
+                card.appendChild(popover);
+
+                const closePopover = (ev) => {
+                    if (!popover.contains(ev.target)) {
+                        popover.remove();
+                        document.removeEventListener('click', closePopover);
+                    }
+                };
+                setTimeout(() => document.addEventListener('click', closePopover), 0);
             });
-
-            // Показываем одно уведомление для всей группы
-            if (destinationFolderData) {
-                const message = artistsToMove.length > 1
-                    ? `${artistsToMove.length} artists moved to "${destinationFolderData.name}"`
-                    : `Moved to "${destinationFolderData.name}"`;
-                window.appGlobals.showToast(message);
-            }
-
-            // Очищаем выделение после успешного перемещения
-            window.appGlobals.clearSelection();
-        };
-    }
-
-    function updateFolderThumbnail(folderId, artistId, onCompleteCallback) {
-        const transaction = db.transaction(FOLDERS_STORE_NAME, 'readwrite');
-        const store = transaction.objectStore(FOLDERS_STORE_NAME);
-        store.get(folderId).onsuccess = (event) => {
-            const folderToUpdate = event.target.result;
-            if (folderToUpdate) {
-                folderToUpdate.lastArtistId = String(artistId);
-                store.put(folderToUpdate);
-                // Обновляем данные в локальном массиве для немедленной перерисовки
-                const localFolder = folders.find(f => f.id === folderId);
-                if (localFolder) {
-                    localFolder.lastArtistId = artistId;
-                }
-            }
-        };
-        if (onCompleteCallback) {
-            transaction.oncomplete = onCompleteCallback;
+            card.appendChild(menuBtn);
         }
-    }
 
-    // --- Обработчики событий ---
+        // Get up to 3 images for the card stack
+        const images = [];
+        for (let i = 0; i < artistIds.length; i++) {
+            if (images.length >= 3) break;
+            const img = getArtistImage(artistIds[i]);
+            if (img) images.push(img);
+        }
 
-    if (addFolderBtn) {
-        addFolderBtn.addEventListener('click', createNewFolder);
-    }
+        const collage = document.createElement('div');
+        collage.className = `board-collage board-collage-stack-${images.length}`;
 
-    // Делегирование событий для dragstart на карточках
-    galleryContainer.addEventListener('dragstart', (e) => {
-        const card = e.target.closest('.card');
-        if (!card || window.appGlobals.currentView !== 'favorites') return;
+        if (images.length === 0) {
+            collage.innerHTML = '<span>Empty</span>';
+        } else if (images.length === 1) {
+            const img = document.createElement('img');
+            img.src = images[0];
+            img.className = 'stack-img stack-img-center';
+            img.decoding = 'async';
+            collage.appendChild(img);
+        } else if (images.length === 2) {
+            const imgBack = document.createElement('img');
+            imgBack.src = images[1];
+            imgBack.className = 'stack-img stack-img-right-fan';
+            imgBack.decoding = 'async';
+            collage.appendChild(imgBack);
 
-        const selectedIds = window.appGlobals.selectedArtistIds;
-        const draggedId = card.dataset.id;
-
-        // Если перетаскиваемая карточка входит в группу выделенных,
-        // передаем всю группу.
-        if (selectedIds.has(draggedId)) {
-            e.dataTransfer.setData('application/json', JSON.stringify(Array.from(selectedIds)));
+            const imgFront = document.createElement('img');
+            imgFront.src = images[0];
+            imgFront.className = 'stack-img stack-img-left-fan';
+            imgFront.decoding = 'async';
+            collage.appendChild(imgFront);
         } else {
-            // Иначе, это одиночное перетаскивание. Очищаем выделение и передаем один ID.
-            window.appGlobals.clearSelection();
-            document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
-            e.dataTransfer.setData('application/json', JSON.stringify([draggedId]));
+            const imgLeft = document.createElement('img');
+            imgLeft.src = images[1];
+            imgLeft.className = 'stack-img stack-img-left';
+            imgLeft.decoding = 'async';
+            collage.appendChild(imgLeft);
+
+            const imgRight = document.createElement('img');
+            imgRight.src = images[2];
+            imgRight.className = 'stack-img stack-img-right';
+            imgRight.decoding = 'async';
+            collage.appendChild(imgRight);
+
+            const imgCenter = document.createElement('img');
+            imgCenter.src = images[0];
+            imgCenter.className = 'stack-img stack-img-center';
+            imgCenter.decoding = 'async';
+            collage.appendChild(imgCenter);
         }
 
-        e.dataTransfer.effectAllowed = 'move';
+        card.appendChild(collage);
+
+        const title = document.createElement('div');
+        title.className = 'board-title';
+        title.textContent = name;
+        card.appendChild(title);
+
+        const meta = document.createElement('div');
+        meta.className = 'board-meta';
+        meta.textContent = `${count} style${count !== 1 ? 's' : ''}`;
+        card.appendChild(meta);
+
+        return card;
+    }
+
+    function openFolderView(id) {
+        activeFolderId = id;
+        window.appGlobals.currentView = 'folder';
+        window.location.hash = '#/folder/' + id;
+        
+        const txtExportContainer = document.getElementById('txt-export-container');
+        const favoritesControlsWrapper = document.getElementById('favorites-controls-wrapper');
+        const tabBoards = document.getElementById('tab-boards');
+        const renameBtn = document.getElementById('rename-board-btn');
+        const deleteBtn = document.getElementById('delete-board-btn');
+        
+        if (txtExportContainer) txtExportContainer.style.display = 'flex';
+        if (favoritesControlsWrapper) favoritesControlsWrapper.style.display = 'flex';
+        if (backToBoardsBtn) backToBoardsBtn.style.display = 'inline-block';
+        if (renameBtn) renameBtn.style.display = id === 'unsorted' ? 'none' : 'inline-block';
+        if (deleteBtn) deleteBtn.style.display = id === 'unsorted' ? 'none' : 'inline-block';
+        if (tabBoards && window.appGlobals.setActiveTab) window.appGlobals.setActiveTab(tabBoards);
+        
+        window.appGlobals.renderView();
+    }
+
+    function getActiveFolderItemIds() {
+        if (activeFolderId === 'unsorted') {
+            return getUnsortedArtistIds();
+        }
+        const items = folderArtists.get(activeFolderId) || [];
+        const set = new Set();
+        items.forEach(item => {
+            const idVal = (item && typeof item === 'object' && item.id !== undefined) ? item.id : item;
+            if (idVal !== undefined && idVal !== null) {
+                set.add(idVal);
+                set.add(String(idVal));
+                if (!isNaN(idVal)) set.add(Number(idVal));
+            }
+        });
+        return set;
+    }
+
+    // Dropdown logic
+    function showBoardSelectionDropdown(artistId, buttonElement) {
+        if (!boardDropdown || !boardOverlay) return;
+        targetArtistIdForSave = artistId;
+        
+        // Compute position
+        const rect = buttonElement.getBoundingClientRect();
+        boardDropdown.style.top = (rect.bottom + 8) + 'px';
+        
+        // align right or left depending on space
+        if (rect.left + 260 > window.innerWidth) {
+            boardDropdown.style.left = Math.max(10, rect.right - 260) + 'px';
+        } else {
+            boardDropdown.style.left = rect.left + 'px';
+        }
+        
+        boardDropdown.classList.remove('hidden');
+        boardOverlay.style.display = 'block';
+        
+        renderBoardSelectionList('');
+        if (boardSearchInput) boardSearchInput.value = '';
+        hideCreateInput();
+    }
+
+    function closeBoardDropdown() {
+        if (boardDropdown) boardDropdown.classList.add('hidden');
+        if (boardOverlay) boardOverlay.style.display = 'none';
+        targetArtistIdForSave = null;
+    }
+
+    if (boardOverlay) {
+        boardOverlay.addEventListener('click', closeBoardDropdown);
+    }
+
+    if (boardSearchInput) {
+        boardSearchInput.addEventListener('input', (e) => {
+            renderBoardSelectionList(e.target.value);
+            if (e.target.value.trim() !== '') {
+                showCreateInput(e.target.value.trim());
+            } else {
+                hideCreateInput();
+            }
+        });
+    }
+
+    function showCreateInput(val = '') {
+        if (createBoardLabelBox) createBoardLabelBox.style.display = 'none';
+        if (createBoardInputBox) createBoardInputBox.classList.remove('hidden');
+        if (newBoardInput) {
+            newBoardInput.value = val;
+            newBoardInput.focus();
+        }
+    }
+
+    function hideCreateInput() {
+        if (createBoardLabelBox) createBoardLabelBox.style.display = 'flex';
+        if (createBoardInputBox) createBoardInputBox.classList.add('hidden');
+    }
+
+    if (newBoardBtnContainer) {
+        newBoardBtnContainer.addEventListener('click', (e) => {
+            if (e.target === newBoardBtn || e.target === newBoardInput) return;
+            showCreateInput(boardSearchInput ? boardSearchInput.value : '');
+        });
+    }
+
+    function renderBoardSelectionList(searchTerm = '') {
+        if (!boardSelectionList) return;
+        boardSelectionList.innerHTML = '';
+        const term = searchTerm.toLowerCase().trim();
+
+        if (!term || 'favorites'.includes(term) || 'unsorted'.includes(term)) {
+            // Favorites (remove from folder)
+            const unsortedCard = createModalBoardCard('unsorted', 'Favorites');
+            boardSelectionList.appendChild(unsortedCard);
+        }
+
+        folders.forEach(folder => {
+            if (term && !folder.name.toLowerCase().includes(term)) return;
+            const card = createModalBoardCard(folder.id, folder.name);
+            boardSelectionList.appendChild(card);
+        });
+    }
+
+    function createModalBoardCard(id, name) {
+        const card = document.createElement('div');
+        card.style.cursor = 'pointer';
+        card.style.display = 'flex';
+        card.style.alignItems = 'center';
+        card.style.padding = '8px 12px';
+        card.style.borderRadius = '4px';
+        card.style.transition = 'background 0.2s';
+        
+        card.addEventListener('mouseover', () => card.style.background = 'rgba(255,255,255,0.1)');
+        card.addEventListener('mouseout', () => card.style.background = 'transparent');
+        
+        // Match Pinterest style by adding a small image/icon
+        const items = id === 'unsorted' ? [] : (folderArtists.get(id) || []);
+        const firstArtistId = items.length > 0 ? items[items.length - 1].id : null;
+        let imgSrc = null;
+        if (firstArtistId) imgSrc = getArtistImage(firstArtistId);
+
+        const imgDiv = document.createElement('div');
+        imgDiv.style.width = '36px';
+        imgDiv.style.height = '36px';
+        imgDiv.style.marginRight = '12px';
+        imgDiv.style.borderRadius = '6px';
+        imgDiv.style.overflow = 'hidden';
+        imgDiv.style.display = 'flex';
+        imgDiv.style.alignItems = 'center';
+        imgDiv.style.justifyContent = 'center';
+        imgDiv.style.background = 'rgba(255,255,255,0.05)';
+        
+        if (imgSrc) {
+            const img = document.createElement('img');
+            img.src = imgSrc;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            imgDiv.appendChild(img);
+        } else {
+            imgDiv.innerHTML = '<span style="color: var(--text-muted); font-size: 10px;">Empty</span>';
+        }
+        card.appendChild(imgDiv);
+
+        const title = document.createElement('div');
+        title.style.fontWeight = '500';
+        title.style.fontSize = '14px';
+        title.style.flex = '1';
+        title.textContent = name;
+        card.appendChild(title);
+
+        const isSaved = id !== 'unsorted' && items.some(i => String(i.id) === String(targetArtistIdForSave));
+        if (isSaved) {
+            const checkIcon = document.createElement('div');
+            checkIcon.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--text)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            card.appendChild(checkIcon);
+        }
+
+        card.addEventListener('click', () => {
+            if (targetArtistIdForSave) {
+                if (id === 'unsorted') {
+                    removeArtistFromAllFolders(targetArtistIdForSave);
+                } else {
+                    if (isSaved) {
+                        removeArtistFromFolder(id, targetArtistIdForSave);
+                    } else {
+                        addArtistToFolder(id, targetArtistIdForSave);
+                    }
+                }
+                closeBoardDropdown();
+            }
+        });
+
+        return card;
+    }
+
+    function addArtistToFolder(folderId, artistId) {
+        const tx = db.transaction(FOLDER_ARTISTS_STORE_NAME, 'readwrite');
+        const folderArtistsStore = tx.objectStore(FOLDER_ARTISTS_STORE_NAME);
+
+        // Add to new folder
+        const items = folderArtists.get(folderId) || [];
+        if (!items.some(i => String(i.id) === String(artistId))) {
+            items.push({ id: artistId, added: Date.now() });
+            folderArtists.set(folderId, items);
+            folderArtistsStore.put({ folderId, artistIds: items });
+        }
+        
+        tx.oncomplete = () => {
+            if (window.appGlobals.currentView === 'boards' || window.appGlobals.currentView === 'folder') {
+                window.appGlobals.renderView();
+            }
+            updateBoardsCounter();
+            
+            // Show toast notification
+            const folder = folders.find(f => f.id === folderId);
+            const artistItem = window.appGlobals.allItems.find(a => String(a.id) === String(artistId));
+            const artistName = artistItem ? artistItem.artist : 'Artist';
+            if (folder && window.appGlobals.showToast) {
+                window.appGlobals.showToast(`Saved ${artistName} to ${folder.name}`);
+            }
+        };
+    }
+
+    function createFolder(name) {
+        const id = 'folder_' + Date.now();
+        const newFolder = { id, name, created: Date.now() };
+        
+        folders.push(newFolder);
+        folders.sort((a, b) => a.name.localeCompare(b.name));
+        
+        const stores = [FOLDERS_STORE_NAME];
+        if (targetArtistIdForSave) {
+            stores.push(FOLDER_ARTISTS_STORE_NAME);
+        }
+        
+        const tx = db.transaction(stores, 'readwrite');
+        tx.objectStore(FOLDERS_STORE_NAME).put(newFolder);
+        
+        if (targetArtistIdForSave) {
+            const folderArtistsStore = tx.objectStore(FOLDER_ARTISTS_STORE_NAME);
+            const items = [{ id: targetArtistIdForSave, added: Date.now() }];
+            folderArtists.set(id, items);
+            folderArtistsStore.put({ folderId: id, artistIds: items });
+            
+            closeBoardDropdown();
+        }
+        
+        tx.oncomplete = () => {
+            updateBoardsCounter();
+            if (window.appGlobals.currentView === 'boards' || window.appGlobals.currentView === 'folder') {
+                window.appGlobals.renderView();
+            }
+            if (targetArtistIdForSave && window.appGlobals.showToast) {
+                const artistItem = window.appGlobals.allItems.find(a => String(a.id) === String(targetArtistIdForSave));
+                const artistName = artistItem ? artistItem.artist : 'Artist';
+                window.appGlobals.showToast(`Saved ${artistName} to ${name}`);
+            }
+        };
+        
+        return id;
+    }
+
+    if (newBoardBtn) {
+        newBoardBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const name = newBoardInput.value.trim();
+            if (name) {
+                createFolder(name);
+            }
+        });
+    }
+
+    function removeArtistFromAllFolders(artistId) {
+        let changed = false;
+        let folderName = '';
+        const tx = db.transaction(FOLDER_ARTISTS_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(FOLDER_ARTISTS_STORE_NAME);
+        
+        for (const [folderId, items] of folderArtists.entries()) {
+            const idx = items.findIndex(item => item.id === artistId);
+            if (idx !== -1) {
+                items.splice(idx, 1);
+                store.put({ folderId, artistIds: items });
+                changed = true;
+                const f = folders.find(f => f.id === folderId);
+                if (f) folderName = f.name;
+            }
+        }
+
+        tx.oncomplete = () => {
+            if (changed) {
+                const artistItem = window.appGlobals.allItems.find(a => String(a.id) === String(artistId));
+                const artistName = artistItem ? artistItem.artist : 'Artist';
+                window.appGlobals.showToast(`Removed ${artistName} from ${folderName || 'board'}`);
+                if (window.appGlobals.currentView === 'folder' || window.appGlobals.currentView === 'boards') {
+                    window.appGlobals.renderView();
+                }
+            }
+        };
+    }
+
+    function removeArtistFromFolder(folderId, artistId) {
+        const tx = db.transaction(FOLDER_ARTISTS_STORE_NAME, 'readwrite');
+        const folderArtistsStore = tx.objectStore(FOLDER_ARTISTS_STORE_NAME);
+
+        const items = folderArtists.get(folderId) || [];
+        const idx = items.findIndex(i => i.id === artistId);
+        if (idx !== -1) {
+            items.splice(idx, 1);
+            folderArtists.set(folderId, items);
+            folderArtistsStore.put({ folderId, artistIds: items });
+        }
+        
+        tx.oncomplete = () => {
+            if (window.appGlobals.currentView === 'boards' || window.appGlobals.currentView === 'folder') {
+                window.appGlobals.renderView();
+            }
+            updateBoardsCounter();
+            
+            const folder = folders.find(f => f.id === folderId);
+            const artistItem = window.appGlobals.allItems.find(a => String(a.id) === String(artistId));
+            const artistName = artistItem ? artistItem.artist : 'Artist';
+            if (folder && window.appGlobals.showToast) {
+                window.appGlobals.showToast(`Removed ${artistName} from ${folder.name}`);
+            }
+        };
+    }
+
+    if (detailsSaveBtn) {
+        detailsSaveBtn.addEventListener('click', (e) => {
+            const hash = window.location.hash;
+            if (hash.startsWith('#/artist/')) {
+                const encodedArtistName = hash.replace('#/artist/', '');
+                const artistName = decodeURIComponent(encodedArtistName);
+                const allItems = window.appGlobals.allItems || [];
+                const artistItem = allItems.find(item => item.artist === artistName);
+                if (artistItem) {
+                    showBoardSelectionDropdown(artistItem.id, detailsSaveBtn);
+                }
+            }
+        });
+    }
+
+    if (quicklookSaveBtn) {
+        quicklookSaveBtn.addEventListener('click', (e) => {
+            const nameEl = document.getElementById('quicklook-artist-name');
+            if (nameEl) {
+                const artistName = nameEl.textContent;
+                const allItems = window.appGlobals.allItems || [];
+                const artistItem = allItems.find(item => item.artist === artistName);
+                if (artistItem) {
+                    showBoardSelectionDropdown(artistItem.id, quicklookSaveBtn);
+                }
+            }
+        });
+    }
+
+    const renameBoardBtn = document.getElementById('rename-board-btn');
+    const deleteBoardBtn = document.getElementById('delete-board-btn');
+
+    if (renameBoardBtn) {
+        renameBoardBtn.addEventListener('click', () => {
+            if (!activeFolderId || activeFolderId === 'unsorted') return;
+            const folder = folders.find(f => f.id === activeFolderId);
+            const currentName = folder ? folder.name : '';
+            showCustomRenameModal(activeFolderId, currentName);
+        });
+    }
+
+    if (deleteBoardBtn) {
+        deleteBoardBtn.addEventListener('click', () => {
+            if (!activeFolderId || activeFolderId === 'unsorted') return;
+            const folder = folders.find(f => f.id === activeFolderId);
+            const name = folder ? folder.name : 'this board';
+            showCustomDeleteModal(activeFolderId, name);
+        });
+    }
+
+    backToBoardsBtn.addEventListener('click', () => {
+        window.location.hash = '#/boards';
+        backToBoardsBtn.style.display = 'none';
+        if (renameBoardBtn) renameBoardBtn.style.display = 'none';
+        if (deleteBoardBtn) deleteBoardBtn.style.display = 'none';
+        activeFolderId = null;
     });
 
-    /**
-     * Gets the name of a folder by its ID.
-     * @param {string} folderId The ID of the folder.
-     * @param {object} [options] Optional parameters.
-     * @param {boolean} [options.returnOldNameAfterDeletion=false] If true, returns a placeholder name if the folder was just deleted from memory but the name is needed for a toast message.
-     * @returns {string} The name of the folder or an empty string.
-     */
-    function getFolderName(folderId, { returnOldNameAfterDeletion = false } = {}) {
-        if (folderId === 'unsorted') {
-            return 'Unsorted';
-        }
-        const folder = folders.find(f => f.id === folderId);
-        return folder ? folder.name : '';
-    }
-
-    /**
-     * Обрабатывает удаление артиста из избранного.
-     * Вызывается из app.js для синхронизации состояния папок.
-     * @param {string} artistId ID удаленного из избранного артиста.
-     */
-    function handleFavoriteRemoval(artistId) {
-        removeArtistFromPreviousFolder(artistId);
-        renderFolders(); // Всегда перерисовываем панель для обновления папки "Unsorted"
-    }
-
-    // --- Экспорт для app.js ---
-    window.appFolders = {
-        init: initFolders,
-        showPanel: () => { 
-            if (foldersPanelWrapper && window.innerWidth > 992) {
-                foldersPanelWrapper.style.display = 'block'; 
-            }
+    window.foldersAPI = {
+        initFolders,
+        renderBoards,
+        getActiveFolderItemIds,
+        getActiveFolderId: () => activeFolderId,
+        getFolderName: (id) => {
+            if (id === 'unsorted') return 'Favorites';
+            const f = folders.find(item => item.id === id);
+            return f ? f.name : 'Board';
         },
-        hidePanel: () => { if(foldersPanelWrapper) foldersPanelWrapper.style.display = 'none'; },
-        get activeFolderId() { return activeFolderId; },
-        setActiveFolder: setActiveFolder,
-        getArtistIdsInFolder: (folderId) => {
-            const items = folderArtists.get(folderId) || [];
-            return items.sort((a, b) => b.added - a.added).map(item => item.id);
+        openFolderView: (id) => {
+            window.appGlobals.currentView = 'folder';
+            openFolderView(id);
         },
-        getUnsortedArtistIds: getUnsortedArtistIds,
-        getFolderName: (folderId, returnOldName) => getFolderName(folderId, { returnOldNameAfterDeletion: returnOldName }),
-        handleFavoriteRemoval: handleFavoriteRemoval,
-        get folders() { return folders; }, // Экспортируем массив папок
-        get folderArtists() { return folderArtists; }, // Экспортируем Map связей
-        loadData: loadDataAndRender // Экспортируем функцию для перезагрузки данных
+        getAllFolders: () => folders,
+        getFolderArtists: () => folderArtists
     };
 });

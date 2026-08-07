@@ -421,6 +421,7 @@ input[type="range"]::-webkit-slider-thumb {
     display: block;
     background-color: var(--bg);
     transition: filter 0.3s ease;
+    image-rendering: high-quality;
 }
 
 .card:hover .card__image,
@@ -958,3 +959,460 @@ body.disable-hover *::after {
         grid-template-columns: 1fr;
     }
 }
+
+/* Pinterest Boards Styles */
+.boards-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--grid-columns), 1fr);
+    grid-auto-rows: min-content;
+    gap: 2px;
+    padding: 0;
+}
+
+.board-card {
+    position: relative;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.board-collage {
+    width: 100%;
+    aspect-ratio: 1;
+    position: relative;
+    border-radius: 0;
+    overflow: hidden;
+    background: #1c1c1c;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.board-collage span {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.stack-img {
+    position: absolute;
+    width: 50%;
+    height: auto;
+    aspect-ratio: 832 / 1216;
+    object-fit: cover;
+    display: block;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.65);
+    transition: transform 0.25s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.25s ease;
+    
+    /* Hardware 3D GPU layer promotion & Anti-aliased smooth edges */
+    image-rendering: high-quality;
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform-style: preserve-3d;
+    outline: 1px solid transparent;
+}
+
+.stack-img-center {
+    bottom: 0;
+    left: 50%;
+    transform: translate(-50%, 0);
+    z-index: 3;
+    width: 52%;
+}
+
+.stack-img-left {
+    bottom: 0;
+    left: 23%;
+    transform: translate(-50%, 4%) rotate(-13deg);
+    transform-origin: bottom center;
+    opacity: 0.55;
+    z-index: 1;
+    width: 49%;
+}
+
+.stack-img-right {
+    bottom: 0;
+    left: 77%;
+    transform: translate(-50%, 4%) rotate(13deg);
+    transform-origin: bottom center;
+    opacity: 0.55;
+    z-index: 2;
+    width: 49%;
+}
+
+.stack-img-left-fan {
+    bottom: 0;
+    left: 42%;
+    transform: translate(-50%, 2%) rotate(-10deg);
+    transform-origin: bottom center;
+    z-index: 2;
+    width: 52%;
+    opacity: 1;
+}
+
+.stack-img-right-fan {
+    bottom: 0;
+    left: 66%;
+    transform: translate(-50%, 3%) rotate(12deg);
+    transform-origin: bottom center;
+    opacity: 0.55;
+    z-index: 1;
+    width: 49%;
+}
+
+.board-card:hover .stack-img-center {
+    transform: translate(-50%, -2%) scale(1.02);
+}
+
+.board-card:hover .stack-img-left {
+    transform: translate(-54%, 4%) rotate(-15deg);
+    opacity: 0.75;
+}
+
+.board-card:hover .stack-img-right {
+    transform: translate(-46%, 4%) rotate(15deg);
+    opacity: 0.75;
+}
+
+.board-card:hover .stack-img-left-fan {
+    transform: translate(-52%, 0%) rotate(-12deg);
+}
+
+.board-card:hover .stack-img-right-fan {
+    transform: translate(-48%, 2%) rotate(14deg);
+    opacity: 0.75;
+}
+
+.board-card:hover .board-title {
+    color: var(--text-muted);
+}
+
+.board-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    padding: 8px 4px 2px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.board-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    padding: 0 4px 16px 4px;
+}
+
+#board-selection-list .board-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+}
+#board-selection-list .board-card:hover {
+    background: var(--border-light);
+    transform: none;
+}
+#board-selection-list .board-collage {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    margin-bottom: 0;
+    margin-right: 12px;
+}
+#board-selection-list .board-title {
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+/* Pinterest Modal Styling */
+.pinterest-dropdown-modal {
+    background: var(--bg);
+    border-radius: 16px;
+    width: 320px;
+    max-width: 90vw;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: var(--text);
+}
+
+.pinterest-modal-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    position: relative;
+}
+.pinterest-modal-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+.pinterest-close-btn {
+    position: absolute;
+    right: 16px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.pinterest-modal-search {
+    padding: 0 16px 12px;
+    position: relative;
+}
+.pinterest-modal-search svg {
+    position: absolute;
+    left: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-top: -6px;
+    color: var(--text-muted);
+}
+.pinterest-modal-search input {
+    width: 100%;
+    padding: 12px 12px 12px 36px;
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    background: transparent;
+    color: var(--text);
+    outline: none;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+.pinterest-modal-search input:focus {
+    border-color: var(--text-muted);
+}
+
+.pinterest-board-list {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 40vh;
+}
+.pinterest-board-list .board-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+}
+.pinterest-board-list .board-card:hover {
+    background: var(--border-light);
+}
+.pinterest-board-list .board-collage {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0;
+    margin-right: 12px;
+    border-radius: 8px;
+}
+.pinterest-board-list .board-title {
+    font-size: 16px;
+    font-weight: 600;
+}
+.pinterest-board-list .board-meta {
+    display: none; /* hide count to match Pinterest */
+}
+
+.pinterest-modal-footer {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+}
+.pinterest-modal-footer:hover {
+    background: var(--border-light);
+}
+.create-board-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+}
+.create-board-text {
+    flex: 1;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+/* Custom Site Modal & Context Menu */
+.site-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.site-modal-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 24px;
+    width: 360px;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.9);
+}
+
+.site-modal-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+}
+
+.site-modal-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 16px;
+}
+
+.site-modal-input {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
+
+.site-modal-input:focus {
+    border-color: var(--border-light);
+}
+
+.site-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.site-modal-btn {
+    font-size: 13px;
+    font-family: inherit;
+    padding: 6px 16px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    transition: all 0.2s;
+}
+
+.site-modal-btn:hover {
+    color: var(--text);
+    border-color: var(--border-light);
+}
+
+.site-modal-btn.primary {
+    background: var(--text);
+    color: var(--bg);
+    border-color: var(--text);
+    font-weight: 500;
+}
+
+.site-modal-btn.primary:hover {
+    background: #e5e5e5;
+}
+
+.site-modal-btn.danger {
+    background: transparent;
+    color: #ff4b4b;
+    border-color: #ff4b4b;
+}
+
+.site-modal-btn.danger:hover {
+    background: #ff4b4b;
+    color: #ffffff;
+}
+
+/* Card Context Popover */
+.board-card-menu-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: none;
+    border-radius: 50%;
+    color: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    font-size: 18px;
+    line-height: 1;
+    transition: all 0.2s ease;
+    opacity: 0;
+}
+
+.board-card:hover .board-card-menu-btn {
+    opacity: 1;
+}
+
+.board-card-menu-btn:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+    transform: scale(1.05);
+}
+
+.site-popover-menu {
+    position: absolute;
+    top: 36px;
+    right: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.9);
+    z-index: 100;
+    width: 140px;
+    display: flex;
+    flex-direction: column;
+}
+
+.site-popover-item {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.site-popover-item:hover {
+    color: var(--text);
+    background: var(--accent-bg);
+}
+
+.site-popover-item.danger {
+    color: #ff4b4b;
+}
+
+.site-popover-item.danger:hover {
+    background: rgba(255, 75, 75, 0.1);
+    color: #ff4b4b;
+}

@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loader = document.getElementById('loader');
     const tabGallery = document.getElementById('tab-gallery');
     const tabFavorites = document.getElementById('tab-favorites');
+    const tabBoards = document.getElementById('tab-boards');
     const searchInput = document.getElementById('search-input');
     const sortByNameBtn = document.getElementById('sort-by-name');
     const sortByWorksBtn = document.getElementById('sort-by-works');
@@ -28,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const favoritesControlsWrapper = document.getElementById('favorites-controls-wrapper');
     const styleCounter = document.getElementById('style-counter');
     const favoritesCounter = document.getElementById('favorites-counter');
+    const boardsCounter = document.getElementById('boards-counter');
     const txtExportContainer = document.getElementById('txt-export-container');
     const importFavoritesInput = document.getElementById('import-favorites-input');
     const jumpInput = document.getElementById('jump-input');
@@ -82,12 +84,15 @@ document.addEventListener('DOMContentLoaded', () => {
         get favorites() { return favorites; },
         get searchTerm() { return searchTerm; },
         get currentView() { return currentView; },
+        set currentView(v) { currentView = v; },
         get db() { return db; },
         get STORE_NAME() { return STORE_NAME; },
+        get allItems() { return allItems; },
         toggleFavorite,
         showToast,
         renderView,
-        updateVisibleFavorites
+        updateVisibleFavorites,
+        setActiveTab
     };
 
     let dataBasePath = 'https://huggingface.co/datasets/Kellenok/anima/resolve/main/';
@@ -135,7 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize IndexedDB for local storage
     function initDB() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, 4);
+            const request = indexedDB.open(DB_NAME, 10); // Bumped to 10 to guarantee upgrade
 
             request.onerror = () => {
                 console.error('IndexedDB error:', request.error);
@@ -150,12 +155,18 @@ document.addEventListener('DOMContentLoaded', () => {
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
 
-                if (db.objectStoreNames.contains(STORE_NAME)) {
-                    db.deleteObjectStore(STORE_NAME);
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    objectStore.createIndex('timestamp', 'timestamp', { unique: false });
                 }
 
-                const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+                if (!db.objectStoreNames.contains('folders')) {
+                    db.createObjectStore('folders', { keyPath: 'id' });
+                }
+                
+                if (!db.objectStoreNames.contains('folder_artists')) {
+                    db.createObjectStore('folder_artists', { keyPath: 'folderId' });
+                }
             };
         });
     }
@@ -167,8 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const objectStore = transaction.objectStore(STORE_NAME);
             const request = objectStore.getAll();
             request.onsuccess = () => {
-
-                favorites = new Map(request.result.map(item => [item.id, item.timestamp]));
+                favorites = new Map(request.result.map(item => [String(item.id), item.timestamp]));
                 resolve();
             };
         });
@@ -388,7 +398,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             await loadFavoritesFromDB();
             favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
-            renderView();
+
+            if (!window.location.hash || window.location.hash === '#') {
+                renderView();
+            }
         } catch (error) {
             console.error('Failed to load gallery data:', error);
             galleryContainer.innerHTML = '<p style="text-align: center; grid-column: 1 / -1;">Failed to load data.</p>';
@@ -436,8 +449,25 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo({ top: 0, behavior: 'instant' });
 
         let baseItems = [...allItems];
+        
+        const boardsContainer = document.getElementById('boards-container');
+        if (currentView === 'boards') {
+            galleryContainer.style.display = 'none';
+            boardsContainer.style.display = 'grid';
+            boardsContainer.classList.remove('hidden');
+            if (loader) loader.style.display = 'none';
+            if (window.foldersAPI) window.foldersAPI.renderBoards(searchTerm, sortType, sortDirection);
+            return;
+        } else {
+            boardsContainer.style.display = 'none';
+            galleryContainer.style.display = 'grid';
+        }
+
         if (currentView === 'favorites') {
-            baseItems = baseItems.filter(item => favorites.has(item.id));
+            baseItems = baseItems.filter(item => favorites.has(String(item.id)));
+        } else if (currentView === 'folder') {
+            const folderIdsSet = window.foldersAPI ? window.foldersAPI.getActiveFolderItemIds() : new Set();
+            baseItems = baseItems.filter(item => folderIdsSet.has(item.id) || folderIdsSet.has(String(item.id)) || folderIdsSet.has(Number(item.id)));
         }
 
         let sortedItems = [...baseItems];
@@ -481,6 +511,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentItems = filteredItems.slice(startIndexOffset);
 
+        if (loader) {
+            loader.style.display = 'none';
+        }
+
         if (filteredItems.length === 0) {
             const p = document.createElement('p');
             p.style.textAlign = 'center';
@@ -505,9 +539,6 @@ document.addEventListener('DOMContentLoaded', () => {
         virtualState = { startIndex: -1, endIndex: -1 };
         updateVirtualScroll();
 
-        if (loader) {
-            loader.style.display = 'none';
-        }
 
         const targetJumpId = localStorage.getItem('jumpToArtistId');
         if (targetJumpId) {
@@ -534,7 +565,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Recalculate grid visibility to save DOM memory
     function updateVirtualScroll() {
-        if (!currentItems || currentItems.length === 0 || currentView !== 'gallery' && currentView !== 'favorites') return;
+        if (!currentItems || currentItems.length === 0 || (currentView !== 'gallery' && currentView !== 'favorites' && currentView !== 'folder')) return;
 
         const gridComputed = window.getComputedStyle(galleryContainer);
         const columns = gridComputed.getPropertyValue('grid-template-columns').split(' ').length || 1;
@@ -604,10 +635,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleFavorite(item, button) {
         const transaction = db.transaction(STORE_NAME, 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
+        const strId = String(item.id);
 
-        if (favorites.has(item.id)) {
+        if (favorites.has(strId)) {
             store.delete(item.id);
-            favorites.delete(item.id);
+            if (typeof item.id === 'string' && !isNaN(item.id)) store.delete(Number(item.id));
+            favorites.delete(strId);
             favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
             showToast(`Removed ${item.artist} from favorites`);
             if (button) {
@@ -618,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             const favItem = { id: item.id, timestamp: Date.now() };
             store.put(favItem);
-            favorites.set(item.id, favItem.timestamp);
+            favorites.set(strId, favItem.timestamp);
             favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
             showToast(`Added ${item.artist} to favorites`);
             if (button) {
@@ -684,7 +717,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const cardId = card.dataset.id;
             const favButton = card.querySelector('.favorite-button');
             if (cardId && favButton && !favButton.classList.contains('remove-favorite')) {
-                const isFavorited = favorites.has(cardId);
+                const isFavorited = favorites.has(String(cardId));
                 favButton.classList.toggle('favorited', isFavorited);
                 const newTitle = isFavorited ? 'Remove from favorites' : 'Add to favorites';
                 favButton.title = newTitle;
@@ -704,7 +737,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setActiveTab(activeTab) {
-        const tabs = [tabGallery, tabFavorites];
+        const tabs = [tabGallery, tabFavorites, tabBoards];
         tabs.forEach(tab => tab.classList.remove('active'));
         activeTab.classList.add('active');
     }
@@ -731,7 +764,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isVirtualScrollPending) {
             isVirtualScrollPending = true;
             window.requestAnimationFrame(() => {
-                if (currentView === 'gallery' || currentView === 'favorites') {
+                if (currentView === 'gallery' || currentView === 'favorites' || currentView === 'folder') {
                     updateVirtualScroll();
                 }
                 isVirtualScrollPending = false;
@@ -740,7 +773,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('resize', debounce(() => {
-        if (currentView === 'gallery' || currentView === 'favorites') {
+        if (currentView === 'gallery' || currentView === 'favorites' || currentView === 'folder') {
             virtualState = { startIndex: -1, endIndex: -1 };
             updateVirtualScroll();
         }
@@ -752,6 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tabGallery.addEventListener('click', (e) => {
         e.preventDefault();
+        window.location.hash = '';
         if (currentView === 'gallery') return;
         setActiveTab(tabGallery);
         favoritesControlsWrapper.style.display = 'none';
@@ -776,8 +810,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    tabBoards.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.hash = '#/boards';
+        if (currentView === 'boards') return;
+        setActiveTab(tabBoards);
+        favoritesControlsWrapper.style.display = 'flex';
+        txtExportContainer.style.display = 'flex';
+        jumpControls.style.display = 'none'; // No jump in boards
+        sortControls.style.display = 'flex'; // Allow sorting boards
+        sortByDateBtn.style.display = 'none';
+        currentView = 'boards';
+
+        startIndexOffset = 0;
+        jumpInput.value = '';
+        resetJumpState(false);
+
+        if (searchInput.value) {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        renderView();
+    });
+
     tabFavorites.addEventListener('click', (e) => {
         e.preventDefault();
+        window.location.hash = '#/favorites';
         if (currentView === 'favorites') return;
         setActiveTab(tabFavorites);
         favoritesControlsWrapper.style.display = 'flex';
@@ -822,17 +881,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 let importedFavorites = [];
                 let totalAttempted = 0;
                 const content = e.target.result;
+                let parsedData = null;
 
                 try {
-                    const data = JSON.parse(content);
-                    if (data.favorites && Array.isArray(data.favorites)) {
-                        importedFavorites = data.favorites;
-                        totalAttempted = data.favorites.length;
-                    } else if (data.favourites && Array.isArray(data.favourites)) {
+                    parsedData = JSON.parse(content);
+                    if (parsedData.favorites && Array.isArray(parsedData.favorites)) {
+                        importedFavorites = parsedData.favorites;
+                        totalAttempted = parsedData.favorites.length;
+                    } else if (parsedData.favourites && Array.isArray(parsedData.favourites)) {
                         const now = Date.now();
                         const normalizeName = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
 
-                        data.favourites.forEach(nameOrId => {
+                        parsedData.favourites.forEach(nameOrId => {
                             const rawLine = String(nameOrId).trim().toLowerCase();
                             const normalizedLine = normalizeName(rawLine);
                             const artist = allItems.find(a => normalizeName(a.artist) === normalizedLine || String(a.id) === rawLine);
@@ -840,55 +900,170 @@ document.addEventListener('DOMContentLoaded', () => {
                                 importedFavorites.push({ id: String(artist.id), timestamp: now });
                             }
                         });
-                        totalAttempted = data.favourites.length;
-                        if (importedFavorites.length === 0 && data.favourites.length > 0) {
+                        totalAttempted = parsedData.favourites.length;
+                        if (importedFavorites.length === 0 && parsedData.favourites.length > 0) {
                             throw new Error('No matching artists found in JSON array');
                         }
-                    } else {
+                    } else if (!parsedData.folders && !parsedData.categories && !parsedData.groups) {
                         throw new Error('Not a valid favorites JSON');
                     }
                 } catch (jsonError) {
-                    const lines = content.split(/\r?\n/).map(line => line.trim().toLowerCase()).filter(line => line);
-                    const now = Date.now();
-                    const normalizeName = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
-                    totalAttempted = lines.length;
+                    if (!parsedData) {
+                        const lines = content.split(/\r?\n/).map(line => line.trim().toLowerCase()).filter(line => line);
+                        const now = Date.now();
+                        const normalizeName = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+                        totalAttempted = lines.length;
 
-                    lines.forEach(rawLine => {
-                        const normalizedLine = normalizeName(rawLine);
-                        const artist = allItems.find(a => normalizeName(a.artist) === normalizedLine || String(a.id) === rawLine);
-                        if (artist) {
-                            importedFavorites.push({ id: String(artist.id), timestamp: now });
+                        lines.forEach(rawLine => {
+                            const normalizedLine = normalizeName(rawLine);
+                            const artist = allItems.find(a => normalizeName(a.artist) === normalizedLine || String(a.id) === rawLine);
+                            if (artist) {
+                                importedFavorites.push({ id: String(artist.id), timestamp: now });
+                            }
+                        });
+
+                        if (importedFavorites.length === 0 && lines.length > 0) {
+                            throw new Error('No matching artists found in text file');
                         }
-                    });
-
-                    if (importedFavorites.length === 0 && lines.length > 0) {
-                        throw new Error('No matching artists found in text file');
                     }
                 }
 
                 let importedCount = 0;
-                const transaction = db.transaction(STORE_NAME, 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
+                let foldersImported = 0;
 
-                importedFavorites.forEach(fav => {
-                    if (fav.id && fav.timestamp && !favorites.has(String(fav.id))) {
-                        store.put({ id: String(fav.id), timestamp: fav.timestamp });
-                        importedCount++;
+                // Import favorites
+                if (importedFavorites.length > 0) {
+                    const transaction = db.transaction(STORE_NAME, 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    importedFavorites.forEach(fav => {
+                        const favId = (fav && typeof fav === 'object' && fav.id !== undefined) ? String(fav.id) : String(fav);
+                        const ts = (fav && typeof fav === 'object' && fav.timestamp) ? fav.timestamp : Date.now();
+                        if (favId && !favorites.has(favId)) {
+                            store.put({ id: favId, timestamp: ts });
+                            importedCount++;
+                        }
+                    });
+                    await new Promise(resolve => transaction.oncomplete = resolve);
+                }
+
+                // Import folders / categories / groups
+                const categoriesOrFolders = (parsedData && Array.isArray(parsedData.folders)) ? parsedData.folders :
+                                            (parsedData && Array.isArray(parsedData.categories)) ? parsedData.categories :
+                                            (parsedData && Array.isArray(parsedData.groups)) ? parsedData.groups : null;
+
+                if (categoriesOrFolders && window.foldersAPI) {
+                    const dbFolders = window.appGlobals.db;
+                    const fTx = dbFolders.transaction(['folders', 'folder_artists'], 'readwrite');
+                    const foldersStore = fTx.objectStore('folders');
+                    const folderArtistsStore = fTx.objectStore('folder_artists');
+
+                    const existingFolders = window.foldersAPI.getAllFolders();
+                    const existingFolderArtists = window.foldersAPI.getFolderArtists();
+                    const normalizeName = (name) => String(name).toLowerCase().replace(/[^a-z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+
+                    categoriesOrFolders.forEach(fData => {
+                        let targetFolderId = null;
+                        const folderName = fData.name || fData.title || 'Untitled Board';
+                        const existingF = existingFolders.find(f => f.name === folderName);
+                        if (existingF) {
+                            targetFolderId = existingF.id;
+                        } else {
+                            targetFolderId = fData.id || ('folder_' + Date.now() + Math.floor(Math.random() * 1000));
+                            foldersStore.put({ id: targetFolderId, name: folderName, created: fData.created || Date.now() });
+                            foldersImported++;
+                        }
+
+                        const rawItems = fData.artists || fData.slugs || fData.items || [];
+                        if (Array.isArray(rawItems)) {
+                            const currentList = existingFolderArtists.get(targetFolderId) || [];
+                            const newAdds = [];
+
+                            rawItems.forEach(item => {
+                                const itemVal = (item && typeof item === 'object' && item.id !== undefined) ? item.id : item;
+                                const itemStr = String(itemVal).trim();
+                                
+                                let artist = allItems.find(a => String(a.id) === itemStr);
+                                if (!artist) {
+                                    const norm = normalizeName(itemStr);
+                                    artist = allItems.find(a => normalizeName(a.artist) === norm);
+                                }
+
+                                const matchedId = artist ? String(artist.id) : (allItems.some(a => String(a.id) === itemStr) ? itemStr : null);
+                                const addedTime = (item && typeof item === 'object' && item.added) ? item.added : Date.now();
+
+                                if (matchedId && !currentList.some(c => String(c.id || c) === matchedId)) {
+                                    newAdds.push({ id: matchedId, added: addedTime });
+                                }
+                            });
+
+                            if (newAdds.length > 0) {
+                                const merged = [...currentList, ...newAdds];
+                                folderArtistsStore.put({ folderId: targetFolderId, artistIds: merged });
+                            }
+                        }
+                    });
+
+                    await new Promise(resolve => fTx.oncomplete = resolve);
+                    await window.foldersAPI.initFolders();
+                }
+
+                // Check if currently viewing a specific board page
+                let activeBoardId = null;
+                let activeBoardName = null;
+                if (currentView === 'folder' && window.foldersAPI && window.foldersAPI.getActiveFolderId) {
+                    activeBoardId = window.foldersAPI.getActiveFolderId();
+                    if (activeBoardId && activeBoardId !== 'unsorted') {
+                        activeBoardName = window.foldersAPI.getFolderName(activeBoardId);
                     }
-                });
+                }
 
-                await new Promise(resolve => transaction.oncomplete = resolve);
+                let itemsAddedToActiveBoard = 0;
+                if (activeBoardId && window.foldersAPI && importedFavorites.length > 0) {
+                    const dbFolders = window.appGlobals.db;
+                    const fTx = dbFolders.transaction(['folder_artists'], 'readwrite');
+                    const folderArtistsStore = fTx.objectStore('folder_artists');
+
+                    const existingFolderArtists = window.foldersAPI.getFolderArtists();
+                    const currentList = existingFolderArtists.get(activeBoardId) || [];
+                    const newAdds = [];
+
+                    importedFavorites.forEach(fav => {
+                        const favId = (fav && typeof fav === 'object' && fav.id !== undefined) ? String(fav.id) : String(fav);
+                        if (favId && !currentList.some(c => String(c.id || c) === favId)) {
+                            newAdds.push({ id: favId, added: Date.now() });
+                            itemsAddedToActiveBoard++;
+                        }
+                    });
+
+                    if (newAdds.length > 0) {
+                        const merged = [...currentList, ...newAdds];
+                        folderArtistsStore.put({ folderId: activeBoardId, artistIds: merged });
+                        await new Promise(resolve => fTx.oncomplete = resolve);
+                        await window.foldersAPI.initFolders();
+                    }
+                }
+
                 await loadFavoritesFromDB();
                 renderView();
 
                 favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
-                showToast(`Imported ${importedCount}/${totalAttempted} artists`);
+                let toastMsg = '';
+                if (activeBoardName && itemsAddedToActiveBoard > 0) {
+                    toastMsg = `Imported ${itemsAddedToActiveBoard} artists into "${activeBoardName}"`;
+                } else if (activeBoardName) {
+                    toastMsg = `Artists are already in "${activeBoardName}"`;
+                } else {
+                    toastMsg = `Imported ${importedCount} favorites`;
+                    if (foldersImported > 0) {
+                        toastMsg += `, ${foldersImported} boards`;
+                    }
+                }
+                showToast(toastMsg);
 
             } catch (error) {
                 console.error('Error importing favorites:', error);
                 showToast('Error: Could not import favorites. Invalid file or no matches.');
             } finally {
-
                 importFavoritesInput.value = '';
             }
         };
@@ -896,23 +1071,60 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     saveFavoritesBtn.addEventListener('click', () => {
-        if (favorites.size === 0) {
-            showToast('You have no favorites to save.');
-            return;
+        let exportData = {};
+        let exportTitle = 'Favorites';
+
+        if (currentView === 'folder' && window.foldersAPI) {
+            const activeFolderId = window.foldersAPI.getActiveFolderId();
+            if (activeFolderId && activeFolderId !== 'unsorted') {
+                const activeFolder = window.foldersAPI.getAllFolders().find(f => f.id === activeFolderId);
+                if (activeFolder) {
+                    exportTitle = activeFolder.name;
+                    const fArtists = window.foldersAPI.getFolderArtists().get(activeFolder.id) || [];
+                    if (fArtists.length === 0) {
+                        showToast(`Board "${activeFolder.name}" is empty.`);
+                        return;
+                    }
+                    exportData = {
+                        metadata: {
+                            appName: "Anima Style Explorer",
+                            exportDate: new Date().toISOString(),
+                            favoritesCount: fArtists.length,
+                            boardName: activeFolder.name
+                        },
+                        favorites: fArtists.map(a => ({ id: String(a.id || a), timestamp: a.added || Date.now() })),
+                        folders: [{ id: activeFolder.id, name: activeFolder.name, created: activeFolder.created, artists: fArtists }]
+                    };
+                }
+            }
         }
 
-        const favoritesToSave = Array.from(favorites.entries())
-            .map(([id, timestamp]) => ({ id, timestamp }))
-            .sort((a, b) => b.timestamp - a.timestamp);
+        if (!exportData.folders) {
+            if (favorites.size === 0) {
+                showToast('You have no favorites to save.');
+                return;
+            }
+            const favoritesToSave = Array.from(favorites.entries())
+                .map(([id, timestamp]) => ({ id, timestamp }))
+                .sort((a, b) => b.timestamp - a.timestamp);
+                
+            let exportedFolders = [];
+            if (window.foldersAPI) {
+                exportedFolders = window.foldersAPI.getAllFolders().map(f => {
+                    return { ...f, artists: window.foldersAPI.getFolderArtists().get(f.id) || [] };
+                });
+            }
 
-        const exportData = {
-            metadata: {
-                appName: "Anima Style Explorer",
-                exportDate: new Date().toISOString(),
-                favoritesCount: favoritesToSave.length
-            },
-            favorites: favoritesToSave
-        };
+            exportData = {
+                metadata: {
+                    appName: "Anima Style Explorer",
+                    exportDate: new Date().toISOString(),
+                    favoritesCount: favoritesToSave.length
+                },
+                favorites: favoritesToSave,
+                folders: exportedFolders
+            };
+        }
 
         const jsonString = JSON.stringify(exportData, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
@@ -921,27 +1133,41 @@ document.addEventListener('DOMContentLoaded', () => {
         const a = document.createElement('a');
         a.href = url;
         const date = new Date().toISOString().slice(0, 10);
-        a.download = `anima-style-favorites-${date}.json`;
+        const slug = exportTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'favorites';
+        a.download = `anima-style-${slug}-${date}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showToast('Favorites exported to JSON file!');
+        showToast(`Exported "${exportTitle}" to JSON file!`);
     });
 
     exportTxtBtn.addEventListener('click', () => {
-        if (favorites.size === 0) {
-            showToast('You have no favorites to save.');
+        let artistIdsToExport = [];
+        let exportTitle = 'Favorites';
+
+        if (currentView === 'folder' && window.foldersAPI) {
+            const activeFolderId = window.foldersAPI.getActiveFolderId();
+            if (activeFolderId && activeFolderId !== 'unsorted') {
+                const activeFolder = window.foldersAPI.getAllFolders().find(f => f.id === activeFolderId);
+                exportTitle = activeFolder ? activeFolder.name : 'Board';
+                const fArtists = window.foldersAPI.getFolderArtists().get(activeFolderId) || [];
+                artistIdsToExport = fArtists.map(a => String(a.id || a));
+            } else {
+                artistIdsToExport = Array.from(favorites.keys());
+            }
+        } else {
+            artistIdsToExport = Array.from(favorites.keys());
+        }
+
+        if (artistIdsToExport.length === 0) {
+            showToast(`No styles to export in ${exportTitle}.`);
             return;
         }
 
-        const sortedFavoriteIds = Array.from(favorites.entries())
-            .sort(([, timestampA], [, timestampB]) => timestampB - timestampA)
-            .map(([id]) => id);
-
-        const artistNames = sortedFavoriteIds.map(id => {
-            const artistData = allItems.find(item => item.id === id);
+        const artistNames = artistIdsToExport.map(id => {
+            const artistData = allItems.find(item => String(item.id) === String(id));
             return artistData ? artistData.artist : null;
         }).filter(Boolean);
 
@@ -952,11 +1178,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const a = document.createElement('a');
         a.href = url;
         const date = new Date().toISOString().slice(0, 10);
-        a.download = `anima-style-favorites-artists-${date}.txt`;
+        const slug = exportTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'board';
+        a.download = `anima-style-${slug}-${date}.txt`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        showToast(`Exported "${exportTitle}" (${artistNames.length} styles) to TXT!`);
     });
 
     // Limit the execution rate of performance-heavy functions
@@ -1153,6 +1382,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (hash === '#/favorites') {
                 if (currentView !== 'favorites') tabFavorites.click();
+            } else if (hash === '#/boards') {
+                if (currentView !== 'boards') tabBoards.click();
+            } else if (hash.startsWith('#/folder/')) {
+                if (window.foldersAPI) {
+                    window.foldersAPI.openFolderView(hash.replace('#/folder/', ''));
+                }
             } else {
                 if (currentView !== 'gallery') tabGallery.click();
             }
@@ -1354,7 +1589,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateDetailsFavoriteButton(itemId) {
-        const isFavorited = favorites.has(itemId);
+        const isFavorited = favorites.has(String(itemId));
         if (isFavorited) {
             detailsFavoriteBtn.classList.add('active');
             detailsFavoriteBtn.innerHTML = `
@@ -1484,7 +1719,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const favBtn = document.getElementById('quicklook-fav-btn');
         const favText = document.getElementById('quicklook-fav-text');
         if (favBtn && favText) {
-            const isFavorited = favorites.has(quickLookCurrentItem.id);
+            const isFavorited = favorites.has(String(quickLookCurrentItem.id));
             favBtn.classList.toggle('active', isFavorited);
             favText.textContent = isFavorited ? 'Unfavorite' : 'Favorite';
         }
@@ -2193,7 +2428,22 @@ document.addEventListener('DOMContentLoaded', () => {
     checkLocalDataset().then(() => {
         initDB()
             .then(() => {
-                loadInitialData().then(() => {
+                loadInitialData().then(async () => {
+                    if (window.foldersAPI) {
+                        await window.foldersAPI.initFolders();
+                    }
+                    const initParams = new URLSearchParams(window.location.search);
+                    if (initParams.has('search')) {
+                        searchInput.value = initParams.get('search');
+                        searchTerm = searchInput.value.toLowerCase().trim();
+                        if (searchTerm.length > 0) clearSearchBtn.style.display = 'flex';
+                        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+                    }
+                    if (initParams.has('jump')) {
+                        jumpInput.value = initParams.get('jump');
+                        setTimeout(() => handleJump(), 50);
+                    }
+
                     handleHashChange();
                 });
             })
