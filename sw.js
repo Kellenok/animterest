@@ -13,8 +13,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // Only intercept HuggingFace image requests
-    if (url.hostname === 'huggingface.co' && url.pathname.includes('/resolve/main/images/')) {
+    // Intercept HuggingFace image and similar data requests
+    if (url.hostname === 'huggingface.co' && (url.pathname.includes('/resolve/main/images/') || url.pathname.includes('/resolve/main/similar/'))) {
         event.respondWith(
             caches.open(CACHE_NAME).then(async cache => {
                 const cachedResponse = await cache.match(event.request);

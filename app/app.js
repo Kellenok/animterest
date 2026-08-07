@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let dataBasePath = 'https://huggingface.co/datasets/Kellenok/anima/resolve/main/';
 
-    const FORCE_ONLINE = true;
+    const FORCE_ONLINE = false;
 
     async function checkLocalDataset() {
         const urlParams = new URLSearchParams(window.location.search);
@@ -104,21 +104,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (window.location.protocol.startsWith('http')) {
-            try {
-                let sampleId = 0;
-                if (typeof galleryData !== 'undefined' && galleryData.length > 0) {
-                    sampleId = galleryData[0].id;
-                }
-                const numId = parseInt(sampleId, 10);
-                const folderIndex = isNaN(numId) ? 0 : Math.abs(numId) % 10;
+            let sampleId = 0;
+            if (typeof galleryData !== 'undefined' && galleryData.length > 0) {
+                sampleId = galleryData[0].id;
+            }
+            const numId = parseInt(sampleId, 10);
+            const folderIndex = isNaN(numId) ? 0 : Math.abs(numId) % 10;
 
-                const res = await fetch(`./similar/part_${folderIndex}/${sampleId}.js`, { method: 'HEAD' });
-                if (res.ok) {
-                    dataBasePath = './';
-                    console.log('Local dataset detected. Using local media and similar data.');
-                    return;
+            const pathsToCheck = ['./', './anima/'];
+            for (const basePath of pathsToCheck) {
+                try {
+                    const res = await fetch(`${basePath}similar/part_${folderIndex}/${sampleId}.js`, { method: 'HEAD' });
+                    if (res.ok) {
+                        dataBasePath = basePath;
+                        console.log(`Local dataset detected at ${basePath}. Using local media and similar data.`);
+                        return;
+                    }
+                } catch (e) {
+                    // Ignore network errors and try the next path
                 }
-            } catch (e) { }
+            }
         }
         console.log('Using Hugging Face dataset for media and similar data.');
     }
@@ -1760,24 +1765,57 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.focus();
         }
 
-        if (isArtistView) {
-            if (e.code === 'KeyF' && currentDetailsItem) {
-                const detailsFavBtn = document.getElementById('details-favorite-btn');
-                if (detailsFavBtn) detailsFavBtn.click();
+        if (e.code === 'KeyF' || e.code === 'KeyC') {
+            e.preventDefault();
+            let targetItem = null;
+            let targetCard = null;
+
+            // 1st Priority: Keyboard selection
+            if (isArtistView) {
+                if (typeof detailsFocusedIndex !== 'undefined' && detailsFocusedIndex >= 0) {
+                    const cards = detailsGrid.querySelectorAll('.card');
+                    if (cards[detailsFocusedIndex]) {
+                        targetCard = cards[detailsFocusedIndex];
+                        const id = targetCard.dataset.id;
+                        targetItem = allItems.find(item => String(item.id) === id);
+                    }
+                }
+            } else {
+                if (typeof keyboardFocusedIndex !== 'undefined' && keyboardFocusedIndex >= 0 && currentItems && currentItems[keyboardFocusedIndex]) {
+                    targetItem = currentItems[keyboardFocusedIndex];
+                    const activeId = String(targetItem.id);
+                    targetCard = galleryContainer.querySelector(`.card[data-id="${activeId}"]`);
+                }
             }
-            if (e.code === 'KeyC' && currentDetailsItem) {
-                navigator.clipboard.writeText(currentDetailsItem.artist).then(() => {
-                    showToast(`Copied ${currentDetailsItem.artist} to clipboard`);
-                });
+
+            // 2nd Priority: Mouse hover
+            if (!targetItem) {
+                targetItem = hoveredItem;
+                if (targetItem) {
+                    const activeId = String(targetItem.id);
+                    targetCard = document.querySelector(`.card[data-id="${activeId}"]`);
+                }
             }
-        } else {
-            // In gallery view, allow 'F' to like the currently keyboard-focused card
-            if (e.code === 'KeyF' && typeof keyboardFocusedIndex !== 'undefined' && keyboardFocusedIndex >= 0 && currentItems && currentItems[keyboardFocusedIndex]) {
-                const activeId = String(currentItems[keyboardFocusedIndex].id);
-                const activeCard = galleryContainer.querySelector(`.card[data-id="${activeId}"]`);
-                if (activeCard) {
-                    const favBtn = activeCard.querySelector('.favorite-button');
-                    if (favBtn) favBtn.click();
+
+            // 3rd Priority: Hero artist (if on details page)
+            if (!targetItem && isArtistView) {
+                targetItem = currentDetailsItem;
+            }
+
+            if (targetItem) {
+                if (e.code === 'KeyF') {
+                    if (targetCard) {
+                        const favBtn = targetCard.querySelector('.favorite-button');
+                        if (favBtn) favBtn.click();
+                    } else if (isArtistView && targetItem === currentDetailsItem) {
+                        const detailsFavBtn = document.getElementById('details-favorite-btn');
+                        if (detailsFavBtn) detailsFavBtn.click();
+                    }
+                }
+                if (e.code === 'KeyC') {
+                    navigator.clipboard.writeText(targetItem.artist).then(() => {
+                        showToast(`Copied ${targetItem.artist} to clipboard`);
+                    });
                 }
             }
         }
