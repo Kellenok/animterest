@@ -166,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize IndexedDB for local storage
     function initDB() {
         return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, 10); // Bumped to 10 to guarantee upgrade
+            const request = indexedDB.open(DB_NAME, 11); // Migrate legacy artist-keyed favorites
 
             request.onerror = () => {
                 console.error('IndexedDB error:', request.error);
@@ -181,7 +181,25 @@ document.addEventListener('DOMContentLoaded', () => {
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
 
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                if (db.objectStoreNames.contains(STORE_NAME)) {
+                    const legacyStore = event.target.transaction.objectStore(STORE_NAME);
+                    if (legacyStore.keyPath !== 'id') {
+                        const legacyRequest = legacyStore.getAll();
+                        legacyRequest.onsuccess = () => {
+                            const records = legacyRequest.result;
+                            db.deleteObjectStore(STORE_NAME);
+                            const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                            objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+
+                            const sourceItems = typeof galleryData !== 'undefined' ? galleryData : [];
+                            const idByName = new Map(sourceItems.map(item => [normalizeArtistName(item.name), String(item.id)]));
+                            records.forEach(record => {
+                                const id = record.id || idByName.get(normalizeArtistName(record.artist || record.name));
+                                if (id) objectStore.put({ id: String(id), timestamp: Number(record.timestamp) || Date.now() });
+                            });
+                        };
+                    }
+                } else {
                     const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
                     objectStore.createIndex('timestamp', 'timestamp', { unique: false });
                 }
@@ -204,10 +222,71 @@ document.addEventListener('DOMContentLoaded', () => {
             const objectStore = transaction.objectStore(STORE_NAME);
             const request = objectStore.getAll();
             request.onsuccess = () => {
-                favorites = new Map(request.result.map(item => [String(item.id), item.timestamp]));
-                resolve();
+                const artistByName = new Map(allItems.map(item => [normalizeArtistName(item.artist), item]));
+                const migrated = [];
+
+                request.result.forEach(record => {
+                    const id = record.id ?? record.artistId;
+                    const legacyName = record.artist || record.name || record.artist_name;
+                    const item = id != null
+                        ? allItems.find(candidate => String(candidate.id) === String(id))
+                        : artistByName.get(normalizeArtistName(legacyName));
+                    if (!item) return;
+
+                    const timestamp = Number(record.timestamp) || Date.now();
+                    favorites.set(String(item.id), timestamp);
+                    if (String(item.id) !== String(id) || legacyName) {
+                        migrated.push({ id: String(item.id), timestamp });
+                    }
+                });
+
+                migrateLegacyLocalStorage(artistByName, migrated).then(() => resolve());
             };
+            request.onerror = () => resolve();
         });
+    }
+
+    async function migrateLegacyLocalStorage(artistByName, migratedRecords) {
+        const legacyKeys = ['favorites', 'favourites', 'favoriteArtists', 'favorite-artists', 'savedFavorites'];
+        const records = [];
+
+        legacyKeys.forEach(key => {
+            const raw = localStorage.getItem(key);
+            if (!raw) return;
+            try {
+                const parsed = JSON.parse(raw);
+                const values = Array.isArray(parsed)
+                    ? parsed
+                    : (parsed && Array.isArray(parsed.favorites) ? parsed.favorites : []);
+                values.forEach(value => records.push(value));
+            } catch {
+                raw.split(/[,\n]/).map(value => value.trim()).filter(Boolean).forEach(value => records.push(value));
+            }
+        });
+
+        const toStore = [];
+        const seen = new Set(favorites.keys());
+        records.forEach(record => {
+            const rawName = typeof record === 'string'
+                ? record
+                : (record.artist || record.name || record.artist_name || record.id);
+            const item = artistByName.get(normalizeArtistName(rawName));
+            if (!item || seen.has(String(item.id))) return;
+            const timestamp = Number(record.timestamp) || Date.now();
+            seen.add(String(item.id));
+            favorites.set(String(item.id), timestamp);
+            toStore.push({ id: String(item.id), timestamp });
+        });
+
+        if (!migratedRecords.length && !toStore.length) return;
+        await new Promise(resolve => {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            [...migratedRecords, ...toStore].forEach(record => store.put(record));
+            transaction.oncomplete = resolve;
+            transaction.onerror = resolve;
+        });
+        favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
     }
 
     async function debug_checkImagePaths() {
