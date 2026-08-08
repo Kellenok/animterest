@@ -395,6 +395,220 @@ input[type="range"]::-webkit-slider-thumb {
 
 }
 
+/* Reverse image search */
+.reverse-search-workspace {
+    display: grid;
+    grid-template-columns: minmax(300px, 440px) minmax(280px, 1fr);
+    min-height: 430px;
+    border: 1px solid var(--border);
+}
+
+.reverse-upload-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 28px;
+    border-right: 1px solid var(--border);
+}
+
+.reverse-section-header,
+.reverse-upload-actions,
+.reverse-results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.reverse-eyebrow {
+    margin-bottom: 6px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.reverse-section-header h2,
+.reverse-results-header h2 {
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: 0;
+}
+
+.reverse-model-label {
+    flex-shrink: 0;
+    padding: 4px 7px;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.reverse-drop-zone {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 230px;
+    margin: 28px 0 20px;
+    border: 1px dashed var(--border-light);
+    background: #090909;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.reverse-drop-zone:hover,
+.reverse-drop-zone:focus-visible,
+.reverse-drop-zone.is-dragging {
+    border-color: var(--text-muted);
+    background: var(--accent-bg);
+    outline: none;
+}
+
+.reverse-drop-zone svg {
+    width: 26px;
+    height: 26px;
+    margin-bottom: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.5;
+}
+
+.reverse-drop-title {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.reverse-drop-hint,
+.reverse-file-meta,
+.reverse-status,
+.reverse-results-header span,
+.reverse-preview-empty {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.reverse-drop-hint {
+    margin-top: 5px;
+}
+
+.reverse-upload-actions .detail-action-btn {
+    min-width: 150px;
+}
+
+.reverse-upload-actions .detail-action-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+}
+
+.reverse-preview-panel {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    overflow: hidden;
+    background: #090909;
+}
+
+.reverse-preview-image {
+    width: 100%;
+    height: 100%;
+    max-height: 620px;
+    object-fit: contain;
+}
+
+.reverse-remove-image {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.65);
+    font-size: 22px;
+    line-height: 1;
+}
+
+.reverse-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    text-align: center;
+}
+
+.reverse-status:not(:empty) {
+    min-height: 92px;
+}
+
+.reverse-status .spinner {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+}
+
+.reverse-status.is-error {
+    color: #ff6b6b;
+}
+
+.reverse-result-section {
+    margin-top: 34px;
+}
+
+.reverse-results-header {
+    padding: 8px 0 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2px;
+}
+
+.reverse-results-grid .card__visual::after {
+    content: attr(data-score);
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    padding: 4px 6px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.72);
+    color: var(--text);
+    font-size: 10px;
+    line-height: 1;
+}
+
+@media (max-width: 768px) {
+    .reverse-search-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .reverse-upload-panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+        padding: 20px;
+    }
+
+    .reverse-preview-panel {
+        min-height: 320px;
+    }
+}
+
+@media (max-width: 480px) {
+    .reverse-upload-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .reverse-upload-actions .detail-action-btn {
+        width: 100%;
+    }
+}
+
 .card {
     position: relative;
     background: transparent;
@@ -1005,7 +1219,7 @@ body.disable-hover *::after {
     display: block;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.65);
     transition: transform 0.25s cubic-bezier(0.2, 0, 0.2, 1), opacity 0.25s ease;
-    
+
     /* Hardware 3D GPU layer promotion & Anti-aliased smooth edges */
     image-rendering: high-quality;
     will-change: transform;
@@ -1415,4 +1629,4 @@ body.disable-hover *::after {
 .site-popover-item.danger:hover {
     background: rgba(255, 75, 75, 0.1);
     color: #ff4b4b;
-}
+}

@@ -74,6 +74,7 @@
                         class="sh-count">0</span></a>
                 <a href="#/boards" id="tab-boards" class="sh-link">Boards <span id="boards-counter"
                         class="sh-count">0</span></a>
+                <a href="#/reverse-search" id="tab-reverse-search" class="sh-link">Reverse Search</a>
                 <a href="about.html" class="sh-link">About & Info</a>
             </div>
             <script>
@@ -85,6 +86,9 @@
                     } else if (h === '#/favorites') {
                         document.getElementById('tab-gallery').classList.remove('active');
                         document.getElementById('tab-favorites').classList.add('active');
+                    } else if (h === '#/reverse-search') {
+                        document.getElementById('tab-gallery').classList.remove('active');
+                        document.getElementById('tab-reverse-search').classList.add('active');
                     }
                 })();
             </script>
@@ -150,6 +154,65 @@
 
         <div id="boards-container" class="boards-grid hidden"></div>
         <div id="gallery-container" class="gallery-grid"></div>
+    </main>
+
+    <main id="view-reverse-search" class="main-content view-section hidden">
+        <div class="reverse-search-workspace">
+            <section class="reverse-upload-panel" aria-labelledby="reverse-search-title">
+                <div class="reverse-section-header">
+                    <div>
+                        <p class="reverse-eyebrow">Image Search</p>
+                        <h2 id="reverse-search-title">Find artist styles</h2>
+                    </div>
+                    <span class="reverse-model-label">Kaloscope 2.0</span>
+                </div>
+
+                <button id="reverse-drop-zone" class="reverse-drop-zone" type="button">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M12 16V4M7 9l5-5 5 5"></path>
+                        <path d="M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"></path>
+                    </svg>
+                    <span class="reverse-drop-title">Choose an image</span>
+                    <span class="reverse-drop-hint">or drop it here / paste with Ctrl+V</span>
+                </button>
+                <input id="reverse-file-input" type="file" accept="image/*" hidden>
+
+                <div class="reverse-upload-actions">
+                    <div id="reverse-file-meta" class="reverse-file-meta">JPG, PNG or WEBP</div>
+                    <button id="reverse-search-btn" class="detail-action-btn primary" type="button" disabled>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="11" cy="11" r="7"></circle>
+                            <path d="m20 20-4-4"></path>
+                        </svg>
+                        <span id="reverse-search-label">Search styles</span>
+                    </button>
+                </div>
+            </section>
+
+            <section id="reverse-preview-panel" class="reverse-preview-panel" aria-label="Selected image preview">
+                <div id="reverse-preview-empty" class="reverse-preview-empty">No image selected</div>
+                <img id="reverse-preview-image" class="reverse-preview-image hidden" alt="Selected image">
+                <button id="reverse-remove-image" class="reverse-remove-image hidden" type="button" aria-label="Remove selected image" title="Remove image">&times;</button>
+            </section>
+        </div>
+
+        <section id="reverse-kaloscope-section" class="reverse-result-section hidden">
+            <div class="reverse-results-header">
+                <h2>Kaloscope</h2>
+                <span id="reverse-results-count"></span>
+            </div>
+            <div id="reverse-status" class="reverse-status" aria-live="polite"></div>
+            <div id="reverse-results" class="gallery-grid reverse-results-grid"></div>
+        </section>
+
+        <section id="reverse-style-extractor-section" class="reverse-result-section hidden">
+            <div class="reverse-results-header">
+                <h2>Style Extractor</h2>
+                <span id="reverse-style-extractor-count"></span>
+            </div>
+            <div id="reverse-style-extractor-status" class="reverse-status" aria-live="polite"></div>
+            <div id="reverse-style-extractor-results" class="gallery-grid reverse-results-grid"></div>
+        </section>
     </main>
 
     <!-- Secondary UI: Details Page (SPA routing) -->
@@ -294,7 +357,7 @@
 
     <div id="toast-notification" aria-live="polite"></div>
     <script src="app/data.js?v=63"></script>
-    <script src="app/app.js?v=63"></script>
+    <script src="app/app.js?v=65"></script>
     <script src="app/folders.js?v=63"></script>
 </body>
 

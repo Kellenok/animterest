@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabGallery = document.getElementById('tab-gallery');
     const tabFavorites = document.getElementById('tab-favorites');
     const tabBoards = document.getElementById('tab-boards');
+    const tabReverseSearch = document.getElementById('tab-reverse-search');
     const searchInput = document.getElementById('search-input');
     const sortByNameBtn = document.getElementById('sort-by-name');
     const sortByWorksBtn = document.getElementById('sort-by-works');
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const viewGallery = document.getElementById('view-gallery');
     const viewArtist = document.getElementById('view-artist');
+    const viewReverseSearch = document.getElementById('view-reverse-search');
     const controlsContainerWrapper = document.getElementById('controls-container');
     const detailsBackBtn = document.getElementById('details-back-btn');
     const detailsImage = document.getElementById('details-image');
@@ -53,11 +55,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailsGrid = document.getElementById('details-grid');
     const detailsHero = document.getElementById('details-hero');
 
+    const navCenter = document.querySelector('.nav-center');
+    const sortColumn = document.querySelector('.sh-sort');
+    const reverseDropZone = document.getElementById('reverse-drop-zone');
+    const reverseFileInput = document.getElementById('reverse-file-input');
+    const reverseSearchBtn = document.getElementById('reverse-search-btn');
+    const reverseSearchLabel = document.getElementById('reverse-search-label');
+    const reverseFileMeta = document.getElementById('reverse-file-meta');
+    const reversePreviewImage = document.getElementById('reverse-preview-image');
+    const reversePreviewEmpty = document.getElementById('reverse-preview-empty');
+    const reverseRemoveImage = document.getElementById('reverse-remove-image');
+    const reverseKaloscopeSection = document.getElementById('reverse-kaloscope-section');
+    const reverseStatus = document.getElementById('reverse-status');
+    const reverseResultsCount = document.getElementById('reverse-results-count');
+    const reverseResults = document.getElementById('reverse-results');
+    const reverseStyleExtractorSection = document.getElementById('reverse-style-extractor-section');
+    const reverseStyleExtractorStatus = document.getElementById('reverse-style-extractor-status');
+    const reverseStyleExtractorCount = document.getElementById('reverse-style-extractor-count');
+    const reverseStyleExtractorResults = document.getElementById('reverse-style-extractor-results');
+
     let currentDetailsItem = null;
     let similarArtistsObserver = null;
     let availableSimilarItems = [];
     let isSimilarItemsLoading = false;
     let similarData = null;
+    let reverseSearchFile = null;
+    let reversePreviewUrl = null;
+    let reverseSearchRequestId = 0;
+    let gradioClientPromise = null;
+    let styleExtractorClientPromise = null;
 
     let allItems = [];
     let itemsSortedByWorks = [];
@@ -368,6 +394,307 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         return card;
+    }
+
+    function normalizeArtistName(name) {
+        return String(name)
+            .toLowerCase()
+            .replace(/\\/g, '')
+            .replace(/_/g, ' ')
+            .replace(/[^a-z0-9]+/g, ' ')
+            .trim();
+    }
+
+    function setReverseStatus(element, message = '', type = '') {
+        element.className = `reverse-status${type ? ` ${type}` : ''}`;
+        element.innerHTML = '';
+        if (type === 'is-loading') {
+            const spinner = document.createElement('span');
+            spinner.className = 'spinner';
+            element.appendChild(spinner);
+        }
+        if (message) element.appendChild(document.createTextNode(message));
+    }
+
+    function clearReverseResults() {
+        reverseResults.innerHTML = '';
+        reverseStyleExtractorResults.innerHTML = '';
+        reverseKaloscopeSection.classList.add('hidden');
+        reverseStyleExtractorSection.classList.add('hidden');
+        reverseResultsCount.textContent = '';
+        reverseStyleExtractorCount.textContent = '';
+        setReverseStatus(reverseStatus);
+        setReverseStatus(reverseStyleExtractorStatus);
+    }
+
+    function selectReverseImage(file) {
+        if (!file || !file.type.startsWith('image/')) {
+            showToast('Choose a JPG, PNG or WEBP image.');
+            return;
+        }
+        if (file.size > 15 * 1024 * 1024) {
+            showToast('The image must be smaller than 15 MB.');
+            return;
+        }
+
+        reverseSearchRequestId += 1;
+        reverseSearchFile = file;
+        if (reversePreviewUrl) URL.revokeObjectURL(reversePreviewUrl);
+        reversePreviewUrl = URL.createObjectURL(file);
+        reversePreviewImage.src = reversePreviewUrl;
+        reversePreviewImage.classList.remove('hidden');
+        reversePreviewEmpty.classList.add('hidden');
+        reverseRemoveImage.classList.remove('hidden');
+        reverseSearchBtn.disabled = false;
+        reverseFileMeta.textContent = `${file.name} - ${(file.size / 1024 / 1024).toFixed(1)} MB`;
+        reverseFileInput.value = '';
+        clearReverseResults();
+    }
+
+    async function resizeImageForSearch(file) {
+        const image = await createImageBitmap(file);
+        const pixelCount = image.width * image.height;
+        if (pixelCount <= 1000000) {
+            image.close();
+            return file;
+        }
+
+        const scale = Math.sqrt(1000000 / pixelCount);
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(image, 0, 0, width, height);
+        image.close();
+
+        const blob = await new Promise((resolve, reject) => {
+            canvas.toBlob(result => {
+                if (result) resolve(result);
+                else reject(new Error('Could not resize the selected image'));
+            }, 'image/webp', 0.92);
+        });
+        return new File([blob], `${file.name.replace(/\.[^.]+$/, '') || 'image'}.webp`, { type: 'image/webp' });
+    }
+
+    function removeReverseImage() {
+        reverseSearchRequestId += 1;
+        reverseSearchFile = null;
+        reverseSearchBtn.disabled = true;
+        reverseSearchLabel.textContent = 'Search styles';
+        reversePreviewImage.classList.add('hidden');
+        reversePreviewImage.removeAttribute('src');
+        reversePreviewEmpty.classList.remove('hidden');
+        reverseRemoveImage.classList.add('hidden');
+        reverseFileMeta.textContent = 'JPG, PNG or WEBP';
+        if (reversePreviewUrl) URL.revokeObjectURL(reversePreviewUrl);
+        reversePreviewUrl = null;
+        clearReverseResults();
+    }
+
+    async function getGradioClient() {
+        if (!gradioClientPromise) {
+            gradioClientPromise = import('https://cdn.jsdelivr.net/npm/@gradio/client@2.4.0/dist/index.min.js')
+                .then(async ({ Client, handle_file }) => ({
+                    client: await Client.connect('DraconicDragon/Kaloscope-artist-style-classifier'),
+                    handleFile: handle_file
+                }))
+                .catch(error => {
+                    gradioClientPromise = null;
+                    throw error;
+                });
+        }
+        return gradioClientPromise;
+    }
+
+    async function getStyleExtractorClient() {
+        if (!styleExtractorClientPromise) {
+            styleExtractorClientPromise = import('https://cdn.jsdelivr.net/npm/@gradio/client@2.4.0/dist/index.min.js')
+                .then(async ({ Client, handle_file }) => ({
+                    client: await Client.connect('gustproof/style-similarity'),
+                    handleFile: handle_file
+                }))
+                .catch(error => {
+                    styleExtractorClientPromise = null;
+                    throw error;
+                });
+        }
+        return styleExtractorClientPromise;
+    }
+
+    function getArtistLookup() {
+        return new Map(allItems.map(item => [normalizeArtistName(item.artist), item]));
+    }
+
+    async function runKaloscopeSearch(file, requestId) {
+        try {
+            const { client, handleFile } = await getGradioClient();
+            const result = await client.predict('/predict', {
+                image: handleFile(file),
+                model_selection: 'Kaloscope v2.0 ONNX',
+                top_k: 25,
+                threshold: 0
+            });
+            if (requestId !== reverseSearchRequestId) return;
+
+            const predictions = JSON.parse(result.data[2] || '{}');
+            const artistByName = getArtistLookup();
+            const seenIds = new Set();
+            const matches = Object.entries(predictions)
+                .map(([name, score]) => ({ item: artistByName.get(normalizeArtistName(name)), score: Number(score) }))
+                .filter(match => match.item && !seenIds.has(String(match.item.id)) && seenIds.add(String(match.item.id)))
+                .slice(0, 10);
+
+            if (matches.length === 0) {
+                setReverseStatus(reverseStatus, 'No predicted artists were found in this catalogue.');
+                return;
+            }
+
+            matches.forEach(({ item, score }) => {
+                const card = createCard(item, true);
+                card.querySelector('.card__visual').dataset.score = `${(score * 100).toFixed(1)}% match`;
+                reverseResults.appendChild(card);
+            });
+            reverseResultsCount.textContent = `${matches.length} ${matches.length === 1 ? 'result' : 'results'}`;
+            setReverseStatus(reverseStatus);
+        } catch (error) {
+            if (requestId !== reverseSearchRequestId) return;
+            console.error('Kaloscope search failed:', error);
+            setReverseStatus(reverseStatus, 'Kaloscope is unavailable right now. Please try again.', 'is-error');
+        }
+    }
+
+    function parseStyleExtractorMatches(outputs) {
+        const matchesByHash = new Map();
+        outputs.forEach((output, index) => {
+            const text = String(output || '');
+            const hash = text.match(/\b[a-f0-9]{32}\b/i)?.[0]?.toLowerCase();
+            if (!hash || matchesByHash.has(hash)) return;
+            const distance = Number(text.match(/Distance:\s*([0-9.]+)/i)?.[1]);
+            matchesByHash.set(hash, {
+                distance: Number.isFinite(distance) ? distance : Number.POSITIVE_INFINITY,
+                index
+            });
+        });
+        return matchesByHash;
+    }
+
+    async function fetchDanbooruArtists(matchesByHash) {
+        const hashes = [...matchesByHash.keys()];
+        if (hashes.length === 0) return [];
+
+        const batches = [];
+        for (let i = 0; i < hashes.length; i += 4) {
+            batches.push(hashes.slice(i, i + 4));
+        }
+
+        const posts = [];
+        for (const batch of batches) {
+            const params = new URLSearchParams({
+                tags: batch.map(hash => `~md5:${hash}`).join(' '),
+                only: 'md5,tag_string_artist'
+            });
+            try {
+                const response = await fetch(`https://danbooru.donmai.us/posts.json?${params}`);
+                if (response.ok) posts.push(...await response.json());
+            } catch (error) {
+                console.warn('Could not resolve a Danbooru result batch:', error);
+            }
+            await new Promise(resolve => setTimeout(resolve, 150));
+        }
+        return posts;
+    }
+
+    async function runStyleExtractorSearch(file, requestId) {
+        try {
+            const { client, handleFile } = await getStyleExtractorClient();
+            const result = await client.predict('/f', { im: handleFile(file) });
+            if (requestId !== reverseSearchRequestId) return;
+
+            const matchesByHash = parseStyleExtractorMatches(result.data || []);
+            const posts = await fetchDanbooruArtists(matchesByHash);
+            if (requestId !== reverseSearchRequestId) return;
+
+            const artistByName = getArtistLookup();
+            const artistsById = new Map();
+            posts.forEach(post => {
+                const imageMatch = matchesByHash.get(String(post.md5).toLowerCase());
+                if (!imageMatch) return;
+
+                String(post.tag_string_artist || '').split(/\s+/).filter(Boolean).forEach(tag => {
+                    const item = artistByName.get(normalizeArtistName(tag));
+                    if (!item) return;
+                    const id = String(item.id);
+                    const aggregate = artistsById.get(id) || {
+                        item,
+                        works: 0,
+                        distance: Number.POSITIVE_INFINITY,
+                        firstIndex: Number.POSITIVE_INFINITY
+                    };
+                    aggregate.works += 1;
+                    aggregate.distance = Math.min(aggregate.distance, imageMatch.distance);
+                    aggregate.firstIndex = Math.min(aggregate.firstIndex, imageMatch.index);
+                    artistsById.set(id, aggregate);
+                });
+            });
+
+            const matches = [...artistsById.values()]
+                .sort((a, b) => b.works - a.works || a.distance - b.distance || a.firstIndex - b.firstIndex)
+                .slice(0, 10);
+
+            if (matches.length === 0) {
+                setReverseStatus(reverseStyleExtractorStatus, 'No matching artists were found in this catalogue.');
+                return;
+            }
+
+            matches.forEach(({ item, works }) => {
+                const card = createCard(item, true);
+                card.querySelector('.card__visual').dataset.score = `${works} similar ${works === 1 ? 'work' : 'works'}`;
+                reverseStyleExtractorResults.appendChild(card);
+            });
+            reverseStyleExtractorCount.textContent = `${matches.length} ${matches.length === 1 ? 'result' : 'results'}`;
+            setReverseStatus(reverseStyleExtractorStatus);
+        } catch (error) {
+            if (requestId !== reverseSearchRequestId) return;
+            console.error('Style Extractor search failed:', error);
+            setReverseStatus(reverseStyleExtractorStatus, 'Style Extractor is unavailable right now. Please try again.', 'is-error');
+        }
+    }
+
+    async function runReverseSearch() {
+        if (!reverseSearchFile) return;
+
+        const requestId = ++reverseSearchRequestId;
+        const selectedFile = reverseSearchFile;
+        reverseSearchBtn.disabled = true;
+        reverseSearchLabel.textContent = 'Searching...';
+        clearReverseResults();
+        reverseKaloscopeSection.classList.remove('hidden');
+        reverseStyleExtractorSection.classList.remove('hidden');
+        setReverseStatus(reverseStatus, 'Analyzing image with Kaloscope...', 'is-loading');
+        setReverseStatus(reverseStyleExtractorStatus, 'Finding similar works...', 'is-loading');
+
+        try {
+            const searchFile = await resizeImageForSearch(selectedFile);
+            if (requestId !== reverseSearchRequestId) return;
+            await Promise.all([
+                runKaloscopeSearch(searchFile, requestId),
+                runStyleExtractorSearch(searchFile, requestId)
+            ]);
+        } catch (error) {
+            if (requestId !== reverseSearchRequestId) return;
+            console.error('Could not prepare image for reverse search:', error);
+            setReverseStatus(reverseStatus, 'Could not process this image. Try another file.', 'is-error');
+            setReverseStatus(reverseStyleExtractorStatus, 'Could not process this image. Try another file.', 'is-error');
+        } finally {
+            if (requestId === reverseSearchRequestId) {
+                reverseSearchBtn.disabled = !reverseSearchFile;
+                reverseSearchLabel.textContent = 'Search styles';
+            }
+        }
     }
 
     // Fetch dataset and trigger the first render cycle
@@ -737,9 +1064,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setActiveTab(activeTab) {
-        const tabs = [tabGallery, tabFavorites, tabBoards];
+        const tabs = [tabGallery, tabFavorites, tabBoards, tabReverseSearch];
         tabs.forEach(tab => tab.classList.remove('active'));
         activeTab.classList.add('active');
+    }
+
+    function setReverseSearchControls(isActive) {
+        navCenter.classList.toggle('hidden', isActive);
+        sortColumn.classList.toggle('hidden', isActive);
+        if (isActive) {
+            txtExportContainer.style.display = 'none';
+        }
     }
 
     // Update the disabled styling of search and jump inputs depending on states
@@ -859,6 +1194,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         renderView();
+    });
+
+    tabReverseSearch.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (window.location.hash !== '#/reverse-search') {
+            window.location.hash = '#/reverse-search';
+        } else {
+            openReverseSearchView();
+        }
+    });
+
+    function openReverseSearchView() {
+        currentView = 'reverse-search';
+        setActiveTab(tabReverseSearch);
+        viewArtist.classList.add('hidden');
+        viewGallery.classList.add('hidden');
+        viewReverseSearch.classList.remove('hidden');
+        controlsContainerWrapper.style.display = '';
+        setReverseSearchControls(true);
+        window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    reverseDropZone.addEventListener('click', () => reverseFileInput.click());
+    reverseFileInput.addEventListener('change', () => selectReverseImage(reverseFileInput.files[0]));
+    reverseSearchBtn.addEventListener('click', runReverseSearch);
+    reverseRemoveImage.addEventListener('click', removeReverseImage);
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        reverseDropZone.addEventListener(eventName, event => {
+            event.preventDefault();
+            reverseDropZone.classList.add('is-dragging');
+        });
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+        reverseDropZone.addEventListener(eventName, event => {
+            event.preventDefault();
+            reverseDropZone.classList.remove('is-dragging');
+        });
+    });
+    reverseDropZone.addEventListener('drop', event => selectReverseImage(event.dataTransfer.files[0]));
+    document.addEventListener('paste', event => {
+        if (currentView !== 'reverse-search') return;
+        const imageItem = [...event.clipboardData.items].find(item => item.type.startsWith('image/'));
+        if (!imageItem) return;
+        event.preventDefault();
+        selectReverseImage(imageItem.getAsFile());
     });
 
     const saveFavoritesBtn = document.getElementById('save-favorites-btn');
@@ -1374,11 +1755,15 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 window.location.hash = '';
             }
+        } else if (hash === '#/reverse-search') {
+            openReverseSearchView();
         } else {
 
             viewArtist.classList.add('hidden');
+            viewReverseSearch.classList.add('hidden');
             viewGallery.classList.remove('hidden');
             controlsContainerWrapper.style.display = '';
+            setReverseSearchControls(false);
 
             if (hash === '#/favorites') {
                 if (currentView !== 'favorites') tabFavorites.click();
@@ -1462,6 +1847,7 @@ document.addEventListener('DOMContentLoaded', () => {
         detailsFocusedIndex = -1;
 
         viewGallery.classList.add('hidden');
+        viewReverseSearch.classList.add('hidden');
         controlsContainerWrapper.style.display = 'none';
         viewArtist.classList.remove('hidden');
 
@@ -1943,6 +2329,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
         }
+
+        if (currentView === 'reverse-search') return;
 
         if (e.code === 'Space') {
             e.preventDefault();
