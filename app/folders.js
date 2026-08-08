@@ -28,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let folderArtists = new Map();
     let activeFolderId = null;
     let targetArtistIdForSave = null;
+    let dropdownAnchor = null;
+    let dropdownChoiceIndex = 0;
     let db;
 
     function initFolders() {
@@ -490,16 +492,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function showBoardSelectionDropdown(artistId, buttonElement) {
         if (!boardDropdown || !boardOverlay) return;
         targetArtistIdForSave = artistId;
+        dropdownAnchor = buttonElement;
         
         // Compute position
         const rect = buttonElement.getBoundingClientRect();
-        boardDropdown.style.top = (rect.bottom + 8) + 'px';
+        boardDropdown.style.maxHeight = `${Math.max(180, window.innerHeight - 32)}px`;
         
         // align right or left depending on space
-        if (rect.left + 260 > window.innerWidth) {
-            boardDropdown.style.left = Math.max(10, rect.right - 260) + 'px';
+        const dropdownWidth = 260;
+        if (rect.left + dropdownWidth > window.innerWidth) {
+            boardDropdown.style.left = `${Math.max(10, Math.min(window.innerWidth - dropdownWidth - 10, rect.right - dropdownWidth))}px`;
         } else {
-            boardDropdown.style.left = rect.left + 'px';
+            boardDropdown.style.left = `${Math.max(10, rect.left)}px`;
         }
         
         boardDropdown.classList.remove('hidden');
@@ -508,13 +512,81 @@ document.addEventListener('DOMContentLoaded', () => {
         renderBoardSelectionList('');
         if (boardSearchInput) boardSearchInput.value = '';
         hideCreateInput();
+        const dropdownHeight = boardDropdown.getBoundingClientRect().height;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const top = spaceBelow >= dropdownHeight + 8 || spaceBelow >= spaceAbove
+            ? Math.min(rect.bottom + 8, window.innerHeight - dropdownHeight - 16)
+            : Math.max(16, rect.top - dropdownHeight - 8);
+        boardDropdown.style.top = `${Math.max(16, top)}px`;
+        focusBoardChoice(0);
     }
 
     function closeBoardDropdown() {
+        const anchor = dropdownAnchor;
         if (boardDropdown) boardDropdown.classList.add('hidden');
         if (boardOverlay) boardOverlay.style.display = 'none';
         targetArtistIdForSave = null;
+        dropdownAnchor = null;
+        if (anchor && typeof anchor.focus === 'function') anchor.focus();
     }
+
+    function getBoardChoices() {
+        return [
+            ...Array.from(boardSelectionList?.querySelectorAll('[data-board-choice]') || []),
+            ...(newBoardBtnContainer ? [newBoardBtnContainer] : []),
+            ...(boardSearchInput ? [boardSearchInput] : [])
+        ];
+    }
+
+    function focusBoardChoice(index) {
+        const choices = getBoardChoices();
+        if (!choices.length) return;
+        dropdownChoiceIndex = Math.max(0, Math.min(index, choices.length - 1));
+        choices.forEach((choice, choiceIndex) => {
+            choice.classList.toggle('keyboard-focus', choiceIndex === dropdownChoiceIndex);
+            choice.setAttribute('aria-selected', choiceIndex === dropdownChoiceIndex ? 'true' : 'false');
+        });
+        choices[dropdownChoiceIndex].focus({ preventScroll: true });
+    }
+
+    function activateBoardChoice() {
+        const choice = getBoardChoices()[dropdownChoiceIndex];
+        if (!choice) return;
+        if (choice === boardSearchInput) return;
+        if (choice === newBoardBtnContainer) {
+            showCreateInput();
+            return;
+        }
+        choice.click();
+    }
+
+    document.addEventListener('keydown', event => {
+        if (!boardDropdown || boardDropdown.classList.contains('hidden')) return;
+        if (event.ctrlKey || event.altKey || event.metaKey) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            closeBoardDropdown();
+            return;
+        }
+        if (event.target === newBoardInput) return;
+        const choices = getBoardChoices();
+        if (!choices.length) return;
+        if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            focusBoardChoice((dropdownChoiceIndex + 1) % choices.length);
+        } else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            focusBoardChoice((dropdownChoiceIndex - 1 + choices.length) % choices.length);
+        } else if (event.key === 'Enter' || event.code === 'KeyS') {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            activateBoardChoice();
+        }
+    }, true);
 
     if (boardOverlay) {
         boardOverlay.addEventListener('click', closeBoardDropdown);
@@ -523,11 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (boardSearchInput) {
         boardSearchInput.addEventListener('input', (e) => {
             renderBoardSelectionList(e.target.value);
-            if (e.target.value.trim() !== '') {
-                showCreateInput(e.target.value.trim());
-            } else {
-                hideCreateInput();
-            }
+            hideCreateInput();
         });
     }
 
@@ -572,6 +640,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createModalBoardCard(id, name) {
         const card = document.createElement('div');
+        card.setAttribute('data-board-choice', id);
+        card.setAttribute('role', 'option');
+        card.setAttribute('tabindex', '-1');
+        card.setAttribute('aria-label', name);
         card.style.cursor = 'pointer';
         card.style.display = 'flex';
         card.style.alignItems = 'center';
@@ -583,8 +655,12 @@ document.addEventListener('DOMContentLoaded', () => {
         card.addEventListener('mouseout', () => card.style.background = 'transparent');
         
         // Match Pinterest style by adding a small image/icon
+        const favorites = window.appGlobals.favorites || new Map();
         const items = id === 'unsorted' ? [] : (folderArtists.get(id) || []);
-        const firstArtistId = items.length > 0 ? items[items.length - 1].id : null;
+        const favoriteIds = id === 'unsorted' ? [...favorites.keys()] : [];
+        const firstArtistId = id === 'unsorted'
+            ? favoriteIds[0]
+            : (items.length > 0 ? (items[items.length - 1].id ?? items[items.length - 1]) : null);
         let imgSrc = null;
         if (firstArtistId) imgSrc = getArtistImage(firstArtistId);
 
@@ -606,6 +682,8 @@ document.addEventListener('DOMContentLoaded', () => {
             img.style.height = '100%';
             img.style.objectFit = 'cover';
             imgDiv.appendChild(img);
+        } else if (id === 'unsorted') {
+            imgDiv.innerHTML = '<span style="color: var(--text-muted); font-size: 10px;">Empty</span>';
         } else {
             imgDiv.innerHTML = '<span style="color: var(--text-muted); font-size: 10px;">Empty</span>';
         }
@@ -618,7 +696,9 @@ document.addEventListener('DOMContentLoaded', () => {
         title.textContent = name;
         card.appendChild(title);
 
-        const isSaved = id !== 'unsorted' && items.some(i => String(i.id) === String(targetArtistIdForSave));
+        const isSaved = id === 'unsorted'
+            ? favorites.has(String(targetArtistIdForSave))
+            : items.some(i => String(i.id ?? i) === String(targetArtistIdForSave));
         if (isSaved) {
             const checkIcon = document.createElement('div');
             checkIcon.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--text)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
@@ -628,7 +708,11 @@ document.addEventListener('DOMContentLoaded', () => {
         card.addEventListener('click', () => {
             if (targetArtistIdForSave) {
                 if (id === 'unsorted') {
-                    removeArtistFromAllFolders(targetArtistIdForSave);
+                    const artistItem = (window.appGlobals.allItems || []).find(item => String(item.id) === String(targetArtistIdForSave));
+                    if (artistItem && window.appGlobals.toggleFavorite) {
+                        window.appGlobals.toggleFavorite(artistItem);
+                    }
+                    closeBoardDropdown();
                 } else {
                     if (isSaved) {
                         removeArtistFromFolder(id, targetArtistIdForSave);
@@ -674,21 +758,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function createFolder(name) {
         const id = 'folder_' + Date.now();
         const newFolder = { id, name, created: Date.now() };
+        const savedArtistId = targetArtistIdForSave;
         
         folders.push(newFolder);
         folders.sort((a, b) => a.name.localeCompare(b.name));
         
         const stores = [FOLDERS_STORE_NAME];
-        if (targetArtistIdForSave) {
+        if (savedArtistId) {
             stores.push(FOLDER_ARTISTS_STORE_NAME);
         }
         
         const tx = db.transaction(stores, 'readwrite');
         tx.objectStore(FOLDERS_STORE_NAME).put(newFolder);
         
-        if (targetArtistIdForSave) {
+        if (savedArtistId) {
             const folderArtistsStore = tx.objectStore(FOLDER_ARTISTS_STORE_NAME);
-            const items = [{ id: targetArtistIdForSave, added: Date.now() }];
+            const items = [{ id: savedArtistId, added: Date.now() }];
             folderArtists.set(id, items);
             folderArtistsStore.put({ folderId: id, artistIds: items });
             
@@ -700,8 +785,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.appGlobals.currentView === 'boards' || window.appGlobals.currentView === 'folder') {
                 window.appGlobals.renderView();
             }
-            if (targetArtistIdForSave && window.appGlobals.showToast) {
-                const artistItem = window.appGlobals.allItems.find(a => String(a.id) === String(targetArtistIdForSave));
+            if (savedArtistId && window.appGlobals.showToast) {
+                const artistItem = window.appGlobals.allItems.find(a => String(a.id) === String(savedArtistId));
                 const artistName = artistItem ? artistItem.artist : 'Artist';
                 window.appGlobals.showToast(`Saved ${artistName} to ${name}`);
             }
@@ -716,6 +801,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const name = newBoardInput.value.trim();
             if (name) {
                 createFolder(name);
+            }
+        });
+    }
+
+    if (newBoardInput) {
+        newBoardInput.addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                newBoardBtn.click();
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                closeBoardDropdown();
             }
         });
     }
@@ -847,6 +944,9 @@ document.addEventListener('DOMContentLoaded', () => {
         openFolderView: (id) => {
             window.appGlobals.currentView = 'folder';
             openFolderView(id);
+        },
+        openSaveDropdown: (artistId, anchorElement) => {
+            if (artistId && anchorElement) showBoardSelectionDropdown(artistId, anchorElement);
         },
         closeFolderView,
         getAllFolders: () => folders,

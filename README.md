@@ -3,10 +3,19 @@
 Anima 2B Style Explorer shows how the Anima 2B parameter model draws 40,000 artists from the Danbooru dataset.
 
 <p align="center">
-  <img src="images/Anima 2B Style Explorer.png" alt="Anima 2B Style Explorer Banner" width="800">
+  <img src="images/all-works.webp" alt="All artist styles" width="800">
 </p>
 <p align="center">
-  <img src="images/Anima 2B Style Explorer - Favorites Tab.png" alt="Anima 2B Style Explorer - Favorites Tab" width="800">
+  <img src="images/favorites.webp" alt="Favorite artist styles" width="800">
+</p>
+<p align="center">
+  <img src="images/similar-artists.webp" alt="Similar artists" width="800">
+</p>
+<p align="center">
+  <img src="images/boards.webp" alt="Artist boards" width="800">
+</p>
+<p align="center">
+  <img src="images/reverse-search.webp" alt="Reverse style search" width="800">
 </p>
 
 ## Overview

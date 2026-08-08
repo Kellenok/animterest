@@ -1132,6 +1132,13 @@ body.disable-hover *::after {
     background: #ff4b4b;
 }
 
+#board-selection-list [data-board-choice].keyboard-focus,
+#new-board-btn-container.keyboard-focus {
+    background: rgba(255, 255, 255, 0.1) !important;
+    outline: 1px solid var(--border-light);
+    outline-offset: -1px;
+}
+
 @media (max-width: 600px) {
     .folder-view-header {
         align-items: stretch;
@@ -1236,7 +1243,8 @@ body.disable-hover *::after {
 }
 
 #details-copy-btn,
-#details-favorite-btn {
+#details-favorite-btn,
+#details-save-board-btn {
     grid-column: 1 / -1;
 }
 
@@ -1271,9 +1279,6 @@ body.disable-hover *::after {
         grid-row: span 1;
     }
 
-    .details-actions {
-        grid-template-columns: 1fr;
-    }
 }
 
 /* Pinterest Boards Styles */

@@ -2405,6 +2405,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 return;
             }
+            if (e.code === 'KeyS' && quickLookCurrentItem) {
+                e.preventDefault();
+                const quicklookSaveBtn = document.getElementById('quicklook-save-board-btn');
+                if (quicklookSaveBtn) quicklookSaveBtn.click();
+                return;
+            }
             if (e.code === 'Enter' && quickLookCurrentItem) {
                 const artistToOpen = quickLookCurrentItem.artist;
                 closeQuickLook();
@@ -2474,7 +2480,7 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.focus();
         }
 
-        if (e.code === 'KeyF' || e.code === 'KeyC') {
+        if (e.code === 'KeyF' || e.code === 'KeyC' || e.code === 'KeyS') {
             e.preventDefault();
             let targetItem = null;
             let targetCard = null;
@@ -2532,6 +2538,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     navigator.clipboard.writeText(targetItem.artist).then(() => {
                         showToast(`Copied ${targetItem.artist} to clipboard`);
                     });
+                }
+                if (e.code === 'KeyS' && window.foldersAPI) {
+                    const anchor = targetCard || document.getElementById('details-save-board-btn');
+                    window.foldersAPI.openSaveDropdown(targetItem.id, anchor);
                 }
             }
         }
