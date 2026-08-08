@@ -2384,6 +2384,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (isArtistView) {
                 closeArtistDetails();
+            } else if (currentView === 'folder') {
+                window.location.hash = '#/boards';
             }
             return;
         }
