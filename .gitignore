@@ -7,5 +7,5 @@ node_modules
 .aiexclude
 embeddings.npy
 embeddings_ids.json
-anima/*
+/anima/
 *.py
