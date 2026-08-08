@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabGallery = document.getElementById('tab-gallery');
     const tabFavorites = document.getElementById('tab-favorites');
     const tabBoards = document.getElementById('tab-boards');
-    const tabReverseSearch = document.getElementById('tab-reverse-search');
     const searchInput = document.getElementById('search-input');
     const sortByNameBtn = document.getElementById('sort-by-name');
     const sortByWorksBtn = document.getElementById('sort-by-works');
@@ -55,7 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailsGrid = document.getElementById('details-grid');
     const detailsHero = document.getElementById('details-hero');
 
-    const navCenter = document.querySelector('.nav-center');
     const sortColumn = document.querySelector('.sh-sort');
     const reverseDropZone = document.getElementById('reverse-drop-zone');
     const reverseFileInput = document.getElementById('reverse-file-input');
@@ -65,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const reversePreviewImage = document.getElementById('reverse-preview-image');
     const reversePreviewEmpty = document.getElementById('reverse-preview-empty');
     const reverseRemoveImage = document.getElementById('reverse-remove-image');
+    const reverseSearchHeaderBtn = document.getElementById('reverse-search-header-btn');
     const reverseKaloscopeSection = document.getElementById('reverse-kaloscope-section');
     const reverseStatus = document.getElementById('reverse-status');
     const reverseResultsCount = document.getElementById('reverse-results-count');
@@ -95,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchTerm = '';
     let currentView = 'gallery';
     let lastGalleryScroll = 0;
+    let lastReverseSearchScroll = 0;
     let sortType = 'name';
     let sortDirection = 'desc';
     let isLoading = false;
@@ -586,26 +586,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const hashes = [...matchesByHash.keys()];
         if (hashes.length === 0) return [];
 
-        const batches = [];
-        for (let i = 0; i < hashes.length; i += 4) {
-            batches.push(hashes.slice(i, i + 4));
-        }
-
-        const posts = [];
-        for (const batch of batches) {
-            const params = new URLSearchParams({
-                tags: batch.map(hash => `~md5:${hash}`).join(' '),
-                only: 'md5,tag_string_artist'
-            });
-            try {
-                const response = await fetch(`https://danbooru.donmai.us/posts.json?${params}`);
-                if (response.ok) posts.push(...await response.json());
-            } catch (error) {
-                console.warn('Could not resolve a Danbooru result batch:', error);
-            }
-            await new Promise(resolve => setTimeout(resolve, 150));
-        }
-        return posts;
+        const params = new URLSearchParams({
+            tags: hashes.map(hash => `~md5:${hash}`).join(' '),
+            only: 'md5,tag_string_artist'
+        });
+        const response = await fetch(`https://danbooru.donmai.us/posts.json?${params}`);
+        if (!response.ok) throw new Error(`Danbooru returned ${response.status}`);
+        return response.json();
     }
 
     async function runStyleExtractorSearch(file, requestId) {
@@ -1064,17 +1051,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setActiveTab(activeTab) {
-        const tabs = [tabGallery, tabFavorites, tabBoards, tabReverseSearch];
+        const tabs = [tabGallery, tabFavorites, tabBoards];
         tabs.forEach(tab => tab.classList.remove('active'));
         activeTab.classList.add('active');
     }
 
     function setReverseSearchControls(isActive) {
-        navCenter.classList.toggle('hidden', isActive);
         sortColumn.classList.toggle('hidden', isActive);
         if (isActive) {
             txtExportContainer.style.display = 'none';
         }
+    }
+
+    function hideFolderViewHeader() {
+        const folderViewHeader = document.getElementById('folder-view-header');
+        if (folderViewHeader) folderViewHeader.classList.add('hidden');
     }
 
     // Update the disabled styling of search and jump inputs depending on states
@@ -1134,6 +1125,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateSortButtonsUI();
         }
         currentView = 'gallery';
+        hideFolderViewHeader();
 
         styleCounter.textContent = allItems.length.toLocaleString('en-US');
 
@@ -1156,6 +1148,8 @@ document.addEventListener('DOMContentLoaded', () => {
         sortControls.style.display = 'flex'; // Allow sorting boards
         sortByDateBtn.style.display = 'none';
         currentView = 'boards';
+        hideFolderViewHeader();
+        if (window.foldersAPI && window.foldersAPI.closeFolderView) window.foldersAPI.closeFolderView();
 
         startIndexOffset = 0;
         jumpInput.value = '';
@@ -1180,6 +1174,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortControls.style.display = 'flex';
         sortByDateBtn.style.display = 'inline-block';
         currentView = 'favorites';
+        hideFolderViewHeader();
 
         favoritesCounter.textContent = favorites.size.toLocaleString('en-US');
 
@@ -1196,18 +1191,10 @@ document.addEventListener('DOMContentLoaded', () => {
         renderView();
     });
 
-    tabReverseSearch.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (window.location.hash !== '#/reverse-search') {
-            window.location.hash = '#/reverse-search';
-        } else {
-            openReverseSearchView();
-        }
-    });
-
     function openReverseSearchView() {
         currentView = 'reverse-search';
-        setActiveTab(tabReverseSearch);
+        [tabGallery, tabFavorites, tabBoards].forEach(tab => tab.classList.remove('active'));
+        reverseSearchHeaderBtn.classList.add('active');
         viewArtist.classList.add('hidden');
         viewGallery.classList.add('hidden');
         viewReverseSearch.classList.remove('hidden');
@@ -1743,7 +1730,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hash.startsWith('#/artist/')) {
 
             if (viewArtist.classList.contains('hidden')) {
-                lastGalleryScroll = window.scrollY;
+                if (currentView === 'reverse-search') {
+                    lastReverseSearchScroll = window.scrollY;
+                } else {
+                    lastGalleryScroll = window.scrollY;
+                }
             }
 
             const encodedArtistName = hash.replace('#/artist/', '');
@@ -1757,6 +1748,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else if (hash === '#/reverse-search') {
             openReverseSearchView();
+            if (lastReverseSearchScroll > 0) {
+                setTimeout(() => {
+                    window.scrollTo({ top: lastReverseSearchScroll, behavior: 'instant' });
+                    lastReverseSearchScroll = 0;
+                }, 50);
+            }
         } else {
 
             viewArtist.classList.add('hidden');
@@ -1764,6 +1761,7 @@ document.addEventListener('DOMContentLoaded', () => {
             viewGallery.classList.remove('hidden');
             controlsContainerWrapper.style.display = '';
             setReverseSearchControls(false);
+            reverseSearchHeaderBtn.classList.remove('active');
 
             if (hash === '#/favorites') {
                 if (currentView !== 'favorites') tabFavorites.click();
@@ -2127,6 +2125,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const found = allItems.find(item => String(item.id) === id);
                 if (found) list.push(found);
             });
+        } else if (currentView === 'reverse-search') {
+            list = getReverseSearchItems();
         } else {
             list = currentItems || [];
         }
@@ -2144,7 +2144,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (nextItem) {
             updateQuickLookItem(nextItem);
 
-            if (!isArtistView) {
+            if (currentView === 'reverse-search') {
+                keyboardFocusedIndex = nextIndex;
+                const activeCard = getReverseSearchCards()[nextIndex];
+                if (activeCard) activeCard.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            } else if (!isArtistView) {
                 keyboardFocusedIndex = nextIndex;
                 const activeId = String(nextItem.id);
                 const activeCard = galleryContainer.querySelector(`.card[data-id="${activeId}"]`);
@@ -2330,8 +2334,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (currentView === 'reverse-search') return;
-
         if (e.code === 'Space') {
             e.preventDefault();
             if (isQuickLookOpen) {
@@ -2350,6 +2352,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         targetItem = allItems.find(item => String(item.id) === id);
                     }
                 }
+            } else if (currentView === 'reverse-search') {
+                const reverseItems = getReverseSearchItems();
+                if (keyboardFocusedIndex >= 0) targetItem = reverseItems[keyboardFocusedIndex];
             } else {
                 if (typeof keyboardFocusedIndex !== 'undefined' && keyboardFocusedIndex >= 0 && currentItems && currentItems[keyboardFocusedIndex]) {
                     targetItem = currentItems[keyboardFocusedIndex];
@@ -2402,6 +2407,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         const id = targetCard.dataset.id;
                         targetItem = allItems.find(item => String(item.id) === id);
                     }
+                }
+            } else if (currentView === 'reverse-search') {
+                const reverseItems = getReverseSearchItems();
+                const reverseCards = getReverseSearchCards();
+                if (keyboardFocusedIndex >= 0) {
+                    targetItem = reverseItems[keyboardFocusedIndex];
+                    targetCard = reverseCards[keyboardFocusedIndex];
                 }
             } else {
                 if (typeof keyboardFocusedIndex !== 'undefined' && keyboardFocusedIndex >= 0 && currentItems && currentItems[keyboardFocusedIndex]) {
@@ -2557,6 +2569,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return bestIdx !== -1 ? bestIdx : 0;
     }
 
+    function getReverseSearchCards() {
+        const seen = new Set();
+        return Array.from(document.querySelectorAll('#reverse-results .card, #reverse-style-extractor-results .card'))
+            .filter(card => !seen.has(card.dataset.id) && seen.add(card.dataset.id));
+    }
+
+    function getReverseSearchItems() {
+        const seen = new Set();
+        return getReverseSearchCards().map(card => allItems.find(item => String(item.id) === card.dataset.id))
+            .filter(item => item && !seen.has(String(item.id)) && seen.add(String(item.id)));
+    }
+
+    function scrollToReverseSearchItem() {
+        const cards = getReverseSearchCards();
+        const items = getReverseSearchItems();
+        const item = items[keyboardFocusedIndex];
+        if (!item) return;
+        const card = cards.find(candidate => candidate.dataset.id === String(item.id));
+        if (!card) return;
+        card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        cards.forEach(candidate => candidate.classList.remove('keyboard-focus'));
+        card.classList.add('keyboard-focus');
+    }
+
     let detailsFocusedIndex = -1;
 
     function getDetailsGridColumnCount() {
@@ -2673,6 +2709,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.ctrlKey || e.altKey || e.shiftKey || e.metaKey) return;
 
         const isArtistView = window.location.hash.startsWith('#/artist/');
+        const isReverseSearchView = currentView === 'reverse-search';
 
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
             e.preventDefault();
@@ -2712,6 +2749,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (activeItem) updateQuickLookItem(activeItem);
                 }
                 return;
+            } else if (isReverseSearchView) {
+                const cards = getReverseSearchCards();
+                const items = getReverseSearchItems();
+                if (!cards.length || !items.length) return;
+                if (keyboardFocusedIndex < 0 || keyboardFocusedIndex >= items.length) {
+                    keyboardFocusedIndex = 0;
+                }
+                if (e.code === 'ArrowRight' || e.code === 'ArrowDown') keyboardFocusedIndex++;
+                else if (e.code === 'ArrowLeft' || e.code === 'ArrowUp') keyboardFocusedIndex--;
+                keyboardFocusedIndex = Math.max(0, Math.min(keyboardFocusedIndex, items.length - 1));
+                scrollToReverseSearchItem();
+                if (isQuickLookOpen) updateQuickLookItem(items[keyboardFocusedIndex]);
+                return;
             } else {
                 if (!currentItems || !currentItems.length) return;
 
@@ -2746,6 +2796,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const infoBtn = cards[detailsFocusedIndex].querySelector('.info-button');
                     if (infoBtn) infoBtn.click();
                     else cards[detailsFocusedIndex].click();
+                }
+            } else if (isReverseSearchView) {
+                const cards = getReverseSearchCards();
+                if (keyboardFocusedIndex >= 0 && cards[keyboardFocusedIndex]) {
+                    const infoBtn = cards[keyboardFocusedIndex].querySelector('.info-button');
+                    if (infoBtn) infoBtn.click();
                 }
             } else {
                 if (keyboardFocusedIndex >= 0 && currentItems && currentItems[keyboardFocusedIndex]) {

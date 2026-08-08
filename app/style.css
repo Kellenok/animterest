@@ -140,6 +140,46 @@ button {
     justify-content: center;
 }
 
+.reverse-search-header-btn {
+    display: grid;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    margin-left: 8px;
+    place-items: center;
+    border-left: 1px solid var(--border);
+    padding-left: 12px;
+    color: var(--text-muted);
+    transition: color 0.2s;
+}
+
+.reverse-search-header-btn:hover,
+.reverse-search-header-btn:focus-visible {
+    color: var(--text);
+    outline: none;
+}
+
+.reverse-search-header-btn.active {
+    color: var(--text);
+}
+
+.reverse-search-header-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.about-nav-link {
+    color: var(--text-muted);
+    font-size: 12px;
+    transition: color 0.2s;
+    white-space: nowrap;
+}
+
+.about-nav-link:hover {
+    color: var(--text);
+}
+
 .search-pill {
     display: flex;
     align-items: center;
@@ -254,6 +294,10 @@ input[type="number"]::-webkit-outer-spin-button {
     .nav-right {
         order: 2;
         flex: 1;
+    }
+
+    .about-nav-link {
+        font-size: 11px;
     }
 
     .nav-center {
@@ -1040,6 +1084,64 @@ body.disable-hover *::after {
 /* Artist Details Page (SPA View) */
 .details-page-header {
     margin-bottom: 24px;
+}
+
+.folder-view-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.folder-view-heading {
+    min-width: 0;
+}
+
+.folder-view-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.folder-view-title-row h2 {
+    overflow: hidden;
+    font-size: 20px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.folder-view-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 6px;
+}
+
+.detail-action-btn.danger {
+    color: #ff4b4b;
+    border-color: rgba(255, 75, 75, 0.35);
+}
+
+.detail-action-btn.danger:hover {
+    color: #ffffff;
+    border-color: #ff4b4b;
+    background: #ff4b4b;
+}
+
+@media (max-width: 600px) {
+    .folder-view-header {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .folder-view-actions .detail-action-btn {
+        flex: 1;
+    }
 }
 
 .details-back-btn {

@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const boardsContainer = document.getElementById('boards-container');
     const backToBoardsBtn = document.getElementById('back-to-boards-btn');
+    const folderViewHeader = document.getElementById('folder-view-header');
+    const folderViewTitle = document.getElementById('folder-view-title');
+    const folderViewCount = document.getElementById('folder-view-count');
     const boardsCounter = document.getElementById('boards-counter');
     const boardModal = document.getElementById('board-selection-modal');
     const boardModalCloseBtn = document.getElementById('board-modal-close');
@@ -117,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cmp = a.created - b.created;
                 return sortDirection === 'asc' ? cmp : -cmp;
             });
-        } else if (sortType === 'rank') {
+        } else if (sortType === 'works' || sortType === 'rank') {
             sortedFolders.sort((a, b) => {
                 const countA = (folderArtists.get(a.id) || []).length;
                 const countB = (folderArtists.get(b.id) || []).length;
@@ -204,6 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (renameBtn) renameBtn.style.display = 'none';
             if (deleteBtn) deleteBtn.style.display = 'none';
             if (backToBoardsBtn) backToBoardsBtn.style.display = 'none';
+            if (folderViewHeader) folderViewHeader.classList.add('hidden');
             activeFolderId = null;
             window.appGlobals.renderView();
         };
@@ -439,12 +443,30 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (txtExportContainer) txtExportContainer.style.display = 'flex';
         if (favoritesControlsWrapper) favoritesControlsWrapper.style.display = 'flex';
-        if (backToBoardsBtn) backToBoardsBtn.style.display = 'inline-block';
+        if (folderViewHeader) folderViewHeader.classList.remove('hidden');
+        if (folderViewTitle) folderViewTitle.textContent = id === 'unsorted'
+            ? 'Favorites'
+            : (folders.find(folder => folder.id === id)?.name || 'Board');
+        if (folderViewCount) {
+            const count = id === 'unsorted'
+                ? getUnsortedArtistIds().size
+                : (folderArtists.get(id) || []).length;
+            folderViewCount.textContent = `${count} ${count === 1 ? 'style' : 'styles'}`;
+        }
+        if (backToBoardsBtn) backToBoardsBtn.style.display = 'inline-flex';
         if (renameBtn) renameBtn.style.display = id === 'unsorted' ? 'none' : 'inline-block';
         if (deleteBtn) deleteBtn.style.display = id === 'unsorted' ? 'none' : 'inline-block';
         if (tabBoards && window.appGlobals.setActiveTab) window.appGlobals.setActiveTab(tabBoards);
         
         window.appGlobals.renderView();
+    }
+
+    function closeFolderView() {
+        activeFolderId = null;
+        if (folderViewHeader) folderViewHeader.classList.add('hidden');
+        if (backToBoardsBtn) backToBoardsBtn.style.display = 'none';
+        if (renameBoardBtn) renameBoardBtn.style.display = 'none';
+        if (deleteBoardBtn) deleteBoardBtn.style.display = 'none';
     }
 
     function getActiveFolderItemIds() {
@@ -806,7 +828,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     backToBoardsBtn.addEventListener('click', () => {
         window.location.hash = '#/boards';
-        backToBoardsBtn.style.display = 'none';
+        if (folderViewHeader) folderViewHeader.classList.add('hidden');
         if (renameBoardBtn) renameBoardBtn.style.display = 'none';
         if (deleteBoardBtn) deleteBoardBtn.style.display = 'none';
         activeFolderId = null;
@@ -826,6 +848,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.appGlobals.currentView = 'folder';
             openFolderView(id);
         },
+        closeFolderView,
         getAllFolders: () => folders,
         getFolderArtists: () => folderArtists
     };

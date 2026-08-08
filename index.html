@@ -55,10 +55,16 @@
                     <button id="clear-jump-btn" class="clear-input-btn" aria-label="Clear jump"
                         style="display: none;">&times;</button>
                 </div>
+                <a href="#/reverse-search" id="reverse-search-header-btn" class="reverse-search-header-btn" aria-label="Reverse image search" title="Reverse image search">
+                    <svg viewBox="0 -960 960 960" aria-hidden="true">
+                        <path d="M240-280h480L597-444q-11-2-22.5-5t-22.5-7L450-320l-90-120-120 160Zm-40 160q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h200v80H200v560h560v-213l80 80v133q0 33-23.5 56.5T760-120H200Zm280-360Zm382 56L738-548q-21 14-45 21t-51 7q-74 0-126-52.5T464-700q0-75 52.5-127.5T644-880q75 0 127.5 52.5T824-700q0 27-8 52t-20 46l122 122-56 56ZM644-600q42 0 71-29t29-71q0-42-29-71t-71-29q-42 0-71 29t-29 71q0 42 29 71t71 29Z"></path>
+                    </svg>
+                </a>
             </div>
         </div>
 
         <div class="nav-right">
+            <a href="about.html" class="about-nav-link">About &amp; Info</a>
         </div>
     </header>
 
@@ -74,8 +80,6 @@
                         class="sh-count">0</span></a>
                 <a href="#/boards" id="tab-boards" class="sh-link">Boards <span id="boards-counter"
                         class="sh-count">0</span></a>
-                <a href="#/reverse-search" id="tab-reverse-search" class="sh-link">Reverse Search</a>
-                <a href="about.html" class="sh-link">About & Info</a>
             </div>
             <script>
                 (function() {
@@ -88,7 +92,7 @@
                         document.getElementById('tab-favorites').classList.add('active');
                     } else if (h === '#/reverse-search') {
                         document.getElementById('tab-gallery').classList.remove('active');
-                        document.getElementById('tab-reverse-search').classList.add('active');
+                        document.getElementById('reverse-search-header-btn').classList.add('active');
                     }
                 })();
             </script>
@@ -115,9 +119,6 @@
             <div class="sh-links">
                 <div id="favorites-controls-wrapper"
                     style="display: flex; flex-direction: column; align-items: flex-start; gap: 6px;">
-                    <button id="back-to-boards-btn" class="sh-link action-btn" style="display: none;">&larr; Back to Boards</button>
-                    <button id="rename-board-btn" class="sh-link action-btn" style="display: none;">Rename Board</button>
-                    <button id="delete-board-btn" class="sh-link action-btn" style="display: none; color: #ff4b4b;">Delete Board</button>
                     <button id="import-favorites-btn" class="sh-link action-btn">Import (JSON/TXT)</button>
                     <button id="export-txt-btn" class="sh-link action-btn">Export (TXT)</button>
                     <button id="save-favorites-btn" class="sh-link action-btn">Export (JSON)</button>
@@ -139,6 +140,25 @@
 
     <!-- Main UI: Dynamic Grid Gallery -->
     <main id="view-gallery" class="main-content view-section">
+        <div id="folder-view-header" class="folder-view-header hidden">
+            <div class="folder-view-heading">
+                <button id="back-to-boards-btn" class="details-back-btn" aria-label="Back to Boards">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Back to Boards
+                </button>
+                <div class="folder-view-title-row">
+                    <h2 id="folder-view-title">Board</h2>
+                    <span id="folder-view-count" class="sh-count">0 styles</span>
+                </div>
+            </div>
+            <div class="folder-view-actions">
+                <button id="rename-board-btn" class="detail-action-btn">Rename</button>
+                <button id="delete-board-btn" class="detail-action-btn danger">Delete</button>
+            </div>
+        </div>
 
 
         <button id="scroll-to-top" class="scroll-to-top" aria-label="Scroll to top">
@@ -358,7 +378,7 @@
     <div id="toast-notification" aria-live="polite"></div>
     <script src="app/data.js?v=63"></script>
     <script src="app/app.js?v=65"></script>
-    <script src="app/folders.js?v=63"></script>
+    <script src="app/folders.js?v=64"></script>
 </body>
 
 </html>
